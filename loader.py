@@ -83,7 +83,7 @@ def load(file_paths, augmentation_func=None, size=None, shuffle_buffer=False):
     ds = tfds.zip((ds_images, ds_labels, ds_file_paths))
     if shuffle_buffer is not False:
         ds = ds.shuffle(shuffle_buffer)
-    return ds
+    return ds, class_names
 
 
 def test(args):
@@ -97,7 +97,7 @@ def test(args):
     file_paths = get_image_filepaths(image_dir=args.image_dir)
     np.random.shuffle(file_paths)
 
-    ds = load(
+    ds, class_names = load(
         file_paths=file_paths,
         augmentation_func=Augmenter().augment,
         size=(100, 100),
@@ -105,21 +105,23 @@ def test(args):
     )
 
     for augmented_image, label, original_path in ds:
-        print(f"label: {label}\n"
+        print(f"label: {class_names[label]}\n"
               f"file path: {original_path}\n" + \
               "pixel range: {} - {}".format(tf.reduce_min(augmented_image),
                                             tf.reduce_max(augmented_image)))
 
         original_image = load_image(original_path)
+        original_image = tf.cast(original_image, tf.uint8)
+        augmented_image = tf.cast(augmented_image, tf.uint8)
+
         w = max(original_image.shape[1], augmented_image.shape[1])
         h = max(original_image.shape[0], augmented_image.shape[0])
         original_image = tf.image.resize_with_pad(original_image, h, w)
         augmented_image = tf.image.resize_with_pad(augmented_image, h, w)
-
+        # from IPython import embed; embed()  ### DEBUG
         # write a side-by-side image comparison to disk
         side_by_side = tf.concat([original_image, augmented_image], axis=1)
-        side_by_side = tf.io.encode_jpeg(
-            tf.image.convert_image_dtype(side_by_side, tf.uint8))
+        side_by_side = tf.io.encode_jpeg(tf.cast(side_by_side, tf.uint8))
         tf.io.write_file(temp_image_file_path, side_by_side)
 
         system_call(f'open {temp_image_file_path}')
