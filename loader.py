@@ -36,6 +36,15 @@ def extract_label(file_path):
     return tf.strings.split(file_path, sep=file_path_seperator)
 
 
+def shape_setter(shape):
+    """fix for tf problems when shape confusingly isn't set"""
+    @tf.function
+    def shape_setter_func(img):
+        img.set_shape(shape)
+        return img
+    return shape_setter_func
+
+
 def load(file_paths, augmentation_func=None, size=None, shuffle_buffer=False):
     labels = [filepath_to_label(fp) for fp in file_paths]
     class_names = list(set(labels))
@@ -54,13 +63,21 @@ def load(file_paths, augmentation_func=None, size=None, shuffle_buffer=False):
             return map(augmentation_func, image_generator)
         ds_images = tfds.from_generator(generate_augmented_epoch, tf.float32)
 
+    ds_images = ds_images.map(shape_setter([None, None, 3]))
+
     if size is not None:
-        ds_images = ds_images.map(lambda img: tf.image.resize(img, size))
+        @tf.function
+        def resize(img):
+            return tf.image.resize(img, list(size))
+
+        # from IPython import embed;embed()  ### DEBUG
+        ds_images = ds_images.map(resize)
+        ds_images = ds_images.map(shape_setter(list(size) + [3]))
 
     # scale pixel values to [0, 1]
     # see the common image input conventions
     # https://www.tensorflow.org/hub/common_signatures/images#input
-    ds_images.map(lambda img: tf.image.convert_image_dtype(img, tf.float32))
+    ds_images = ds_images.map(lambda img: tf.image.convert_image_dtype(img, tf.float32))
 
     # zip, shuffle, batch, and return
     ds = tfds.zip((ds_images, ds_labels, ds_file_paths))
@@ -75,23 +92,36 @@ def test(args):
     from augmentation import Augmenter
     from os import system as system_call
 
-    temp_image_file_path = Path(gettempdir(), 'temp_image.jpg')
+    temp_image_file_path = str(Path(gettempdir(), 'temp_image.jpg'))
 
     file_paths = get_image_filepaths(image_dir=args.image_dir)
     np.random.shuffle(file_paths)
 
     ds = load(
         file_paths=file_paths,
-        augmentation_func=Augmenter(),
+        augmentation_func=Augmenter().augment,
         size=(100, 100),
         shuffle_buffer=min(10 * args.batch_size, len(file_paths)),
     )
 
-    for image, label, file_path in ds:
+    for augmented_image, label, original_path in ds:
         print(f"label: {label}\n"
-              f"file path: {file_path}\n"
-              f"pixel range: {(tf.reduce_min(image), tf.reduce_max(image))}")
-        tf.io.write_file(temp_image_file_path, tf.io.encode_jpeg(image))
+              f"file path: {original_path}\n" + \
+              "pixel range: {} - {}".format(tf.reduce_min(augmented_image),
+                                            tf.reduce_max(augmented_image)))
+
+        original_image = load_image(original_path)
+        w = max(original_image.shape[1], augmented_image.shape[1])
+        h = max(original_image.shape[0], augmented_image.shape[0])
+        original_image = tf.image.resize_with_pad(original_image, h, w)
+        augmented_image = tf.image.resize_with_pad(augmented_image, h, w)
+
+        # write a side-by-side image comparison to disk
+        side_by_side = tf.concat([original_image, augmented_image], axis=1)
+        side_by_side = tf.io.encode_jpeg(
+            tf.image.convert_image_dtype(side_by_side, tf.uint8))
+        tf.io.write_file(temp_image_file_path, side_by_side)
+
         system_call(f'open {temp_image_file_path}')
         user_says = input("Press enter to see next image (q to quit).")
         if user_says.strip() == 'q':
