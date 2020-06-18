@@ -14,14 +14,14 @@ def prepare_data(args):
     ds_train = load(
         file_paths=train_file_paths,
         augmentation_func=Augmenter(),
-        size=(299, 299),
+        size=args.image_dimensions,
         shuffle_buffer=min(10 * args.batch_size, n_train),
     )
 
     ds_val = load(
         file_paths=val_file_paths,
         augmentation_func=None,
-        size=(299, 299),
+        size=args.image_dimensions,
         shuffle_buffer=False,
     )
 
@@ -31,38 +31,18 @@ def prepare_data(args):
         ds_test = load(
             file_paths=test_file_paths,
             augmentation_func=None,
-            size=(299, 299),
+            size=args.image_dimensions,
             shuffle_buffer=False,
         )
     return ds_train, ds_val, ds_test
 
 
-def main():
-    import argparse
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        'image_dir',
-        help='Path to subdirectory-labeled image directory.'
-    )
-    parser.add_argument(
-        '--val_part', default=0.1, type=float,
-        help='Portion of training images to reserve for validation.'
-    )
-    parser.add_argument(
-        '--test_dir', default=None,
-        help='Path to subdirectory-labeled image directory for testing.'
-    )
-    parser.add_argument(
-        '--batch_size', default=128,
-        help='Batch size.'
-    )
-    args = parser.parse_args()
-
+def main(args):
     ds_train, ds_val, ds_test = prepare_data(args)
 
     TRAIN! and TEST!
-    
+
 
 if __name__ == '__main__':
-    main()
+    from config import get_user_args
+    main(get_user_args())
