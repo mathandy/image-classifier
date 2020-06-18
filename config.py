@@ -7,7 +7,7 @@ def get_user_args():
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '--image_dir', default='BC_Night', type=Path,
+        '--image_dir', default='../bug-data/BC_Night', type=Path,
         help='Path to subdirectory-labeled image directory.'
     )
     parser.add_argument(

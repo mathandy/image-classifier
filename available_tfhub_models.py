@@ -78,6 +78,6 @@ tf_hub_models += [
     tf_hub_model("resnet_v2_152", 224),
 ]
 
-if __name__ is '__main__':
+if __name__ == '__main__':
     for x in tf_hub_models:
         print(x)

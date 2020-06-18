@@ -1,16 +1,17 @@
 from pathlib import Path
 from os import sep as file_path_seperator
 import tensorflow as tf
-from tensorflow.data import Dataset as tfds
 from imageio import imread
+
+tfds = tf.data.Dataset
 
 
 def filepath_to_label(fp):
-    return fp.parent.name
+    return Path(fp).parent.name
 
 
 def is_image(fp, extensions=('jpg', 'jpeg')):
-    return fp.suffix[1:] in extensions
+    return Path(fp).suffix[1:] in extensions
 
 
 def get_image_filepaths(image_dir, extensions=('jpg', 'jpeg')):
@@ -19,7 +20,8 @@ def get_image_filepaths(image_dir, extensions=('jpg', 'jpeg')):
     image_dir = Path(image_dir)
     assert image_dir.exists()
 
-    return [fp for fp in image_dir.glob('*/*') if is_image(fp, extensions)]
+    return [str(fp) for fp in image_dir.glob('*/*')
+            if is_image(fp, extensions)]
 
 
 @tf.function
@@ -47,9 +49,10 @@ def load(file_paths, augmentation_func=None, size=None, shuffle_buffer=False):
     if augmentation_func is None:
         ds_images = ds_file_paths.map(load_image)
     else:
-        image_generator = map(imread, file_paths)
-        augmented_image_generator = map(augmentation_func, image_generator)
-        ds_images = tfds.from_generator(augmented_image_generator, tf.float32)
+        def generate_augmented_epoch():
+            image_generator = map(imread, file_paths)
+            return map(augmentation_func, image_generator)
+        ds_images = tfds.from_generator(generate_augmented_epoch, tf.float32)
 
     if size is not None:
         ds_images = ds_images.map(lambda img: tf.image.resize(img, size))
@@ -70,6 +73,7 @@ def test(args):
     from tempfile import gettempdir
     import numpy as np
     from augmentation import Augmenter
+    from os import system as system_call
 
     temp_image_file_path = Path(gettempdir(), 'temp_image.jpg')
 
@@ -88,7 +92,10 @@ def test(args):
               f"file path: {file_path}\n"
               f"pixel range: {(tf.reduce_min(image), tf.reduce_max(image))}")
         tf.io.write_file(temp_image_file_path, tf.io.encode_jpeg(image))
-        os.system(f'open {temp_image_file_path}')
+        system_call(f'open {temp_image_file_path}')
+        user_says = input("Press enter to see next image (q to quit).")
+        if user_says.strip() == 'q':
+            return
 
 
 if __name__ == '__main__':
