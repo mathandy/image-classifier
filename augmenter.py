@@ -38,10 +38,8 @@ def strong_aug(p=0.5):
         HueSaturationValue(p=0.3),
     ], p=p)
 
+albumentations_function = strong_aug(p=0.9)
 
-class Augmenter:
-    def __init__(self):
-        self.albumentations_function = strong_aug(p=0.9)
 
-    def augment(self, image):
-        return self.albumentations_function(image=image)["image"]
+def augment(image):
+    return albumentations_function(image=image)["image"]

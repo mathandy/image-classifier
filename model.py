@@ -3,10 +3,10 @@ import tensorflow_hub as hub
 
 
 BATCH_NORM_MOMENTUM = 0.99  # 0.997 is a choice hinted at by tfhub
-N_CLASSES = 5
 
 
-def build_model(model_path, n_classes, input_dimensions=None, input_channels=3):
+def build_model(model_path, n_classes, input_dimensions=None, input_channels=3,
+                batch_norm_momentum=BATCH_NORM_MOMENTUM):
     # see the common image input conventions
     # https://www.tensorflow.org/hub/common_signatures/images#input
     model = tf.keras.Sequential([
@@ -14,7 +14,7 @@ def build_model(model_path, n_classes, input_dimensions=None, input_channels=3):
             model_path,
             trainable=True,
             arguments=dict(batch_norm_momentum=BATCH_NORM_MOMENTUM),
-            output_shape=N_CLASSES)
+            output_shape=n_classes)
     ])
 
     if input_dimensions is None:
@@ -23,8 +23,3 @@ def build_model(model_path, n_classes, input_dimensions=None, input_channels=3):
 
     model.build([None] + list(input_dimensions) + [input_channels])
     return model
-
-
-
-
-

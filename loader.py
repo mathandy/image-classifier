@@ -89,7 +89,7 @@ def load(file_paths, augmentation_func=None, size=None, shuffle_buffer=False):
 def test(args):
     from tempfile import gettempdir
     import numpy as np
-    from augmentation import Augmenter
+    from augmenter import augment
     from os import system as system_call
 
     temp_image_file_path = str(Path(gettempdir(), 'temp_image.jpg'))
@@ -99,7 +99,7 @@ def test(args):
 
     ds, class_names = load(
         file_paths=file_paths,
-        augmentation_func=Augmenter().augment,
+        augmentation_func=augment,
         size=(100, 100),
         shuffle_buffer=min(10 * args.batch_size, len(file_paths)),
     )

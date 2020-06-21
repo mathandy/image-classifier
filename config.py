@@ -1,4 +1,5 @@
 from pathlib import Path
+from available_tfhub_models import tf_hub_model_input_size
 
 
 def get_user_args():
@@ -23,8 +24,21 @@ def get_user_args():
         help='Batch size.'
     )
     parser.add_argument(
-        '--image_dimensions', default=(150, 150), nargs=2,
+        '--image_dimensions', default=None, nargs=2, type=int,
         help='Resize all images to these dimensions (after augmentation).'
     )
+    parser.add_argument(
+        '--model', default='inception_v3',
+        help='Name of TF Hub model to use.'
+    )
     args = parser.parse_args()
+    return process_args(args)
+
+
+def process_args(args):
+
+    if args.image_dimensions is None:
+        sz = tf_hub_model_input_size[args.model]
+        args.image_dimensions = (sz, sz)
+
     return args

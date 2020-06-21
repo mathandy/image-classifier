@@ -58,14 +58,6 @@ for width_multiplier, input_size in _mobilnet_models:
     model_name = "mobilenet_v2_%03d_%d" % (width_multiplier, input_size)
     tf_hub_models.append(tf_hub_model(model_name, input_size))
 
-
-tfhub_model_input_sizes = {
-    "inception_v3": 299,
-    "resnet_v2_152": 224,
-    "resnet_v2_50": 224,
-}
-tf_hub_models = list(tfhub_model_input_sizes.keys())
-
 tf_hub_models += [
     tf_hub_model("inception_v3", 299),
 
@@ -77,6 +69,10 @@ tf_hub_models += [
     tf_hub_model("nasnet_large", 331),
     tf_hub_model("resnet_v2_152", 224),
 ]
+
+tf_hub_model_urls = dict((name, url) for name, url, _ in tf_hub_models)
+tf_hub_model_input_size = dict((name, sz) for name, _, sz in tf_hub_models)
+
 
 if __name__ == '__main__':
     for x in tf_hub_models:
