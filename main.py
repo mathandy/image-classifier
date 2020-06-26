@@ -128,8 +128,8 @@ def main(args):
     # set class weights to compensate for class imbalance
     class_weights = None
     if args.balance_class_weights:
-        n_data = sum(c for c in label_counts.values())
-        class_weights = [c/n_data for c in label_counts.values()]
+        # n_data = sum(c for c in label_counts.values())
+        class_weights = [1/c for c in label_counts.values()]
 
     # define metrics
     metrics = {
