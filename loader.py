@@ -138,7 +138,7 @@ def prepare_data(args):
 
     assert set(test_class_names) == set(val_class_names) == \
            set(train_class_names) == set(class_names)
-    return ds_train, ds_val, ds_test, class_names, label_distribution
+    return ds_train, ds_val, ds_test, class_names, train_label_distribution
 
 
 def load_test(args):

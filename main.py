@@ -105,7 +105,7 @@ class Classifier:
                 print(f'Validation Confusion Matrix:\n{val_cm}')
 
 # TODO: See batch norm todo above
-# TODO: implement class weights
+# TODO: check that implementation of class weights doesn't have softmax issue
 # TODO: finish adding the rest of the tf hub models
 # TODO: build a grid search tool (that goes through models, lr, etc.)
 
