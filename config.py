@@ -1,5 +1,5 @@
 from pathlib import Path
-from available_tfhub_models import tf_hub_model_input_size
+from available_tf_hub_models import tf_hub_model_input_size
 
 
 def get_user_args():
@@ -8,7 +8,7 @@ def get_user_args():
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '--image_dir', default='../bug-data/BC_Night', type=Path,
+        '--image_dir', default='../bug-data/Multi_Inverts_Master', type=Path,
         help='Path to subdirectory-labeled image directory.'
     )
     parser.add_argument(

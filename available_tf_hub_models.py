@@ -49,7 +49,7 @@ def tf_hub_model(name, input_size, url=None):
 
 
 def get_hub_url(model_name):
-    return f"https://tfhub.dev/google/imagenet/{model_name}/classification/4"
+    return f"https://tfhub.dev/google/imagenet/{model_name}/feature_vector/4"
 
 
 # add all mobilenet models to list
@@ -59,7 +59,7 @@ for width_multiplier, input_size in _mobilnet_models:
     tf_hub_models.append(tf_hub_model(model_name, input_size))
 
 tf_hub_models += [
-    tf_hub_model("inception_v3", 299),
+    tf_hub_model("inception_v3", 96),  # online claims this is 299
 
     tf_hub_model("resnet_v2_50", 224),
     tf_hub_model("resnet_v2_101", 224),
