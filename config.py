@@ -31,6 +31,10 @@ def get_user_args():
         '--model', default='inception_v3',
         help='Name of TF Hub model to use.'
     )
+    parser.add_argument(
+        '--balance_class_weights', '-b', default='inception_v3',
+        help='Use class weights to compensate for class imbalance.'
+    )
     args = parser.parse_args()
     return process_args(args)
 
