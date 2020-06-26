@@ -111,6 +111,9 @@ def prepare_data(args):
         label_distribution[label] = len(label_fps)
         train_label_distribution[label] = n_train
 
+    np.random.shuffle(train_file_paths)
+    np.random.shuffle(val_file_paths)
+
     ds_train, train_class_names = load(
         file_paths=train_file_paths,
         augmentation_func=augment,
