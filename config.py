@@ -32,7 +32,7 @@ def get_user_args():
         help='Name of TF Hub model to use.'
     )
     parser.add_argument(
-        '--balance_class_weights', '-b', default='inception_v3',
+        '--balance_class_weights', '-b', default=False, action='store_true',
         help='Use class weights to compensate for class imbalance.'
     )
     args = parser.parse_args()

@@ -1,5 +1,8 @@
+from augmenter import augment
+
 from pathlib import Path
 from os import sep as file_path_seperator
+import numpy as np
 import tensorflow as tf
 from imageio import imread
 
@@ -86,7 +89,59 @@ def load(file_paths, augmentation_func=None, size=None, shuffle_buffer=False):
     return ds, class_names
 
 
-def test(args):
+def prepare_data(args):
+
+    file_paths = get_image_filepaths(image_dir=args.image_dir)
+    np.random.shuffle(file_paths)
+    labels = [filepath_to_label(fp) for fp in file_paths]
+    class_names = list(set(labels))
+
+    # split file paths into train and val sets
+    train_file_paths, val_file_paths = [], []
+    label_distribution, train_label_distribution = {}, {}
+    for label in class_names:
+        label_fps = [fp for fp, l in zip(file_paths, labels) if l == label]
+
+        n_train = int(np.ceil(len(label_fps) * (1 - args.val_part)))
+        train_file_paths += label_fps[:n_train]
+        val_file_paths += label_fps[n_train:]
+        assert len(val_file_paths) > 0
+
+        # record how many examples there are of each label
+        label_distribution[label] = len(label_fps)
+        train_label_distribution[label] = n_train
+
+    ds_train, train_class_names = load(
+        file_paths=train_file_paths,
+        augmentation_func=augment,
+        size=args.image_dimensions,
+        shuffle_buffer=min(10 * args.batch_size, len(train_file_paths)),
+    )
+
+    ds_val, val_class_names = load(
+        file_paths=val_file_paths,
+        augmentation_func=None,
+        size=args.image_dimensions,
+        shuffle_buffer=False,
+    )
+
+    if args.test_dir is not None:
+        test_file_paths = get_image_filepaths(image_dir=args.test_dir)
+        ds_test, test_class_names = load(
+            file_paths=test_file_paths,
+            augmentation_func=None,
+            size=args.image_dimensions,
+            shuffle_buffer=False,
+        )
+    else:
+        ds_test, test_class_names = ds_val, val_class_names
+
+    assert set(test_class_names) == set(val_class_names) == \
+           set(train_class_names) == set(class_names)
+    return ds_train, ds_val, ds_test, class_names
+
+
+def load_test(args):
     from tempfile import gettempdir
     import numpy as np
     from augmenter import augment
@@ -132,4 +187,4 @@ def test(args):
 
 if __name__ == '__main__':
     from config import get_user_args
-    test(get_user_args())
+    load_test(get_user_args())
