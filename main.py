@@ -143,6 +143,7 @@ def main(args):
         optimizer=tf.keras.optimizers.Adam(),
         loss=loss,
         class_weights=class_weights,
+        class_names=class_names,
         metric_dict=metrics,
     )
 
