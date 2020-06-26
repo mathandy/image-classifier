@@ -2,11 +2,14 @@ from loader import prepare_data
 from model import build_model
 import tensorflow as tf
 from pandas import DataFrame
+import numpy as np
+import os
 
 
 class Classifier:
     def __init__(self, model, optimizer, loss, metric_dict=None,
-                 class_weights=None, class_names=None):
+                 class_weights=None, class_names=None,
+                 logdir=os.path.join('logs', 'tmp')):
         self.model = model
         self.optimizer = optimizer
         self.loss = loss
@@ -16,6 +19,9 @@ class Classifier:
             self.class_weights = tf.constant(class_weights, dtype=tf.float32)
         self.metric_dict = metric_dict
         self.class_names = class_names
+        self.logdir = logdir
+        if logdir:
+            os.makedirs(logdir, exist_ok=True)
 
     def update_metrics(self, y_true, y_pred):
         for metric_name, metric in self.metric_dict.items():
@@ -94,15 +100,24 @@ class Classifier:
 
             train_results = self.get_metric_results(reset=True)
             train_results.update({'Loss': epoch_train_loss})
-            print("\nTraining Results")
-            print('\n'.join(f'{k}: {v}' for k, v in train_results.items()))
+            s = "\nTraining Results\n"
+            s += '\n'.join(f'{k}: {v}' for k, v in train_results.items())
+            print(s)
+            with open(os.path.join(self.logdir, 'log.txt'), 'a+') as f:
+                f.write(s)
 
             if validation_data is not None:
                 val_results, val_loss, val_cm = self.score(validation_data)
                 val_results.update({"Val Loss": val_loss})
-                print("\nValidation Results")
-                print('\n'.join(f'{k}: {v}' for k, v in val_results.items()))
-                print(f'Validation Confusion Matrix:\n{val_cm}')
+                s = "\n\nValidation Results\n"
+                s += '\n'.join(f'{k}: {v}' for k, v in val_results.items())
+                s += f'\nValidation Confusion Matrix:\n{val_cm}\n'
+                cm = np.array(val_cm)
+                s += "Sanity Accuracy:\n"
+                s += str(sum(cm[i, i] for i in range(cm.shape[0])) / cm.sum())
+                print(s)
+                with open(os.path.join(self.logdir, 'log.txt'), 'a+') as f:
+                    f.write(s)
 
 # TODO: See batch norm todo above
 # TODO: check that implementation of class weights doesn't have softmax issue
@@ -131,7 +146,7 @@ def main(args):
 
     # define metrics
     metrics = {
-        'Accuracy': tf.keras.metrics.CategoricalAccuracy(),
+        'Accuracy': tf.keras.metrics.BinaryAccuracy,
     }
 
     # build model

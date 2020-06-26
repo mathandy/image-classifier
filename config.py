@@ -1,5 +1,7 @@
 from pathlib import Path
 from available_tf_hub_models import tf_hub_model_input_size
+from tempfile import gettempdir
+from time import time
 
 
 def get_user_args():
@@ -24,7 +26,7 @@ def get_user_args():
         help='Batch size.'
     )
     parser.add_argument(
-        '--epochs', default=30,
+        '--epochs', default=30, type=int,
         help='Number of epochs to train for.'
     )
     parser.add_argument(
@@ -38,6 +40,16 @@ def get_user_args():
     parser.add_argument(
         '--no_class_weights', default=False, action='store_true',
         help='Do not use class weights to compensate for class imbalance.'
+    )
+    parser.add_argument(
+        '--logdir', '-l',
+        default=Path(gettempdir(), 'classifier-logs', str(time).replace('.', '-')),
+        type=Path,
+        help='Name of TF Hub model to use.'
+    )
+    parser.add_argument(
+        '--learning_rate', '-r', default=0.001, type=float,
+        help='Name of TF Hub model to use.'
     )
     args = parser.parse_args()
     return process_args(args)
