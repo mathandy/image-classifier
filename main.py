@@ -1,20 +1,25 @@
 from loader import prepare_data
 from model import build_model
 import tensorflow as tf
+from tensorflow_addons.metrics import MultiLabelConfusionMatrix
 
 
 class Classifier:
-    def __init__(self, model, optimizer, loss, metric_dict, class_weights, args):
+    def __init__(self, model, optimizer, loss, metric_dict=None,
+                 class_weights=None):
         self.model = model
         self.optimizer = optimizer
         self.loss = loss
         self.class_weights = class_weights
         self.metric_dict = metric_dict
-        self.args = args
 
     def update_metrics(self, y_true, y_pred):
-        for metric in self.metric_dict.values():
-            metric.update_state(y_true, y_pred)
+        for metric_name, metric in self.metric_dict.items():
+            if metric_name == 'Confusion Matrix':
+                metric.update_state(tf.one_hot(y_true, metric.num_classes),
+                                    tf.one_hot(y_pred, metric.num_classes))
+            else:
+                metric.update_state(y_true, y_pred)
 
     def get_metric_results(self, reset=False):
         results = {}
@@ -115,7 +120,8 @@ def main(args):
         raise NotImplementedError
 
     # define metrics
-    metrics = {'Accuracy': tf.keras.metrics.CategoricalAccuracy()}
+    metrics = {'Accuracy': tf.keras.metrics.CategoricalAccuracy(),
+               'Confusion Matrix': MultiLabelConfusionMatrix(len(class_names))}
 
     # build model
     model = build_model(model_name=args.model, n_classes=len(class_names))
@@ -126,7 +132,6 @@ def main(args):
         loss=loss,
         class_weights=class_weights,
         metric_dict=metrics,
-        args=args,
     )
 
     # train model
