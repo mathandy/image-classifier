@@ -1,17 +1,19 @@
 from loader import prepare_data
 from model import build_model
 import tensorflow as tf
-from tensorflow_addons.metrics import MultiLabelConfusionMatrix
+# from tensorflow_addons.metrics import MultiLabelConfusionMatrix
+from pandas import DataFrame
 
 
 class Classifier:
     def __init__(self, model, optimizer, loss, metric_dict=None,
-                 class_weights=None):
+                 class_weights=None, class_names=None):
         self.model = model
         self.optimizer = optimizer
         self.loss = loss
         self.class_weights = class_weights
         self.metric_dict = metric_dict
+        self.class_names = class_names
 
     def update_metrics(self, y_true, y_pred):
         for metric_name, metric in self.metric_dict.items():
@@ -56,15 +58,22 @@ class Classifier:
         if reset_before:
             self.reset_metrics()
 
+        n_classes = self.model.output_shape[-1]
+        confusion_matrix = tf.zeros((n_classes, n_classes), dtype=tf.int32)
         loss = 0.
         for x_batch, y_batch in batches:
             logits = self.model(x_batch, training=False)
             predictions = tf.argmax(logits, 1)
             loss += self.loss(y_batch, logits) / x_batch.shape[0]
+            confusion_matrix = confusion_matrix + tf.math.confusion_matrix(
+                y_batch, predictions, num_classes=n_classes)
             self.update_metrics(y_batch, predictions)
         metric_results = self.get_metric_results(reset=reset_after)
 
-        return metric_results, loss
+        confusion_matrix = DataFrame(confusion_matrix.numpy(),
+                                     columns=self.class_names,
+                                     index=self.class_names)
+        return metric_results, loss, confusion_matrix
 
     def compute_sample_weights(self, y_true):
         if self.class_weights is None:
@@ -89,10 +98,11 @@ class Classifier:
             print('\n'.join(f'{k}: {v}' for k, v in train_results.items()))
 
             if validation_data is not None:
-                val_results, val_loss = self.score(validation_data)
+                val_results, val_loss, val_cm = self.score(validation_data)
                 val_results.update({"Val Loss": val_loss})
                 print("\nValidation Results")
                 print('\n'.join(f'{k}: {v}' for k, v in val_results.items()))
+                print(f'Validation Confusion Matrix:\n{val_cm}')
 
 # TODO: See batch norm todo above
 # TODO: implement class weights
@@ -120,8 +130,10 @@ def main(args):
         raise NotImplementedError
 
     # define metrics
-    metrics = {'Accuracy': tf.keras.metrics.CategoricalAccuracy(),
-               'Confusion Matrix': MultiLabelConfusionMatrix(len(class_names))}
+    metrics = {
+        'Accuracy': tf.keras.metrics.CategoricalAccuracy(),
+        # 'Confusion Matrix': MultiLabelConfusionMatrix(len(class_names)),
+    }
 
     # build model
     model = build_model(model_name=args.model, n_classes=len(class_names))
@@ -142,7 +154,11 @@ def main(args):
 
     # load_test
     if args.test_dir is not None:
-        classifier.score(ds_test)
+        test_results, test_loss, test_cm = classifier.score(ds_test)
+        test_results.update({"Val Loss": test_loss})
+        print("\nValidation Results")
+        print('\n'.join(f'{k}: {v}' for k, v in test_results.items()))
+        print(f'Test Set Confusion Matrix:\n{test_cm}')
 
 
 if __name__ == '__main__':
