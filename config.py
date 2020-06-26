@@ -24,6 +24,10 @@ def get_user_args():
         help='Batch size.'
     )
     parser.add_argument(
+        '--epochs', default=30,
+        help='Number of epochs to train for.'
+    )
+    parser.add_argument(
         '--image_dimensions', default=None, nargs=2, type=int,
         help='Resize all images to these dimensions (after augmentation).'
     )
@@ -32,8 +36,8 @@ def get_user_args():
         help='Name of TF Hub model to use.'
     )
     parser.add_argument(
-        '--balance_class_weights', '-b', default=False, action='store_true',
-        help='Use class weights to compensate for class imbalance.'
+        '--no_class_weights', default=False, action='store_true',
+        help='Do not use class weights to compensate for class imbalance.'
     )
     args = parser.parse_args()
     return process_args(args)

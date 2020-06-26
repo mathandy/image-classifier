@@ -1,7 +1,6 @@
 from loader import prepare_data
 from model import build_model
 import tensorflow as tf
-# from tensorflow_addons.metrics import MultiLabelConfusionMatrix
 from pandas import DataFrame
 
 
@@ -82,8 +81,7 @@ class Classifier:
             return None
         return tf.gather(self.class_weights, y_true)
 
-    def train(self, training_data, validation_data=None):
-        epochs = 2
+    def train(self, training_data, validation_data=None, epochs=1):
         for epoch in range(epochs):
             print("\nStart of epoch %d" % (epoch,))
             epoch_train_loss = 0
@@ -127,14 +125,12 @@ def main(args):
 
     # set class weights to compensate for class imbalance
     class_weights = None
-    if args.balance_class_weights:
-        # n_data = sum(c for c in label_counts.values())
+    if not args.no_class_weights:
         class_weights = [1/c for c in label_counts.values()]
 
     # define metrics
     metrics = {
         'Accuracy': tf.keras.metrics.CategoricalAccuracy(),
-        # 'Confusion Matrix': MultiLabelConfusionMatrix(len(class_names)),
     }
 
     # build model
@@ -153,6 +149,7 @@ def main(args):
     classifier.train(
         training_data=ds_train,
         validation_data=ds_val,
+        epochs=args.epochs,
     )
 
     # load_test
