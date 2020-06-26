@@ -11,7 +11,10 @@ class Classifier:
         self.model = model
         self.optimizer = optimizer
         self.loss = loss
-        self.class_weights = class_weights
+        if class_weights is None:
+            self.class_weights = None
+        else:
+            self.class_weights = tf.constant(class_weights, dtype=tf.float32)
         self.metric_dict = metric_dict
         self.class_names = class_names
 
@@ -43,11 +46,9 @@ class Classifier:
             # though they are marked not trainable
             # TO SEE, check self.model.trainable_weights
             logits = self.model(x_batch, training=True)
-            loss_value = self.loss(y_batch, logits)
+            loss_value = self.loss(y_batch, logits,
+                                   sample_weight=sample_weights)
         grads = tape.gradient(loss_value, self.model.trainable_weights)
-        if sample_weights is not None:
-            grads = grads * sample_weights
-            raise NotImplementedError
         self.optimizer.apply_gradients(zip(grads, self.model.trainable_weights))
 
         if update_metrics:
@@ -76,9 +77,10 @@ class Classifier:
         return metric_results, loss, confusion_matrix
 
     def compute_sample_weights(self, y_true):
+        # https://github.com/tensorflow/tensorflow/issues/10021
         if self.class_weights is None:
             return None
-        raise NotImplementedError
+        return tf.gather(self.class_weights, y_true)
 
     def train(self, training_data, validation_data=None):
         epochs = 2
@@ -106,7 +108,6 @@ class Classifier:
 
 # TODO: See batch norm todo above
 # TODO: implement class weights
-# TODO: add class-wise metrics
 # TODO: finish adding the rest of the tf hub models
 # TODO: build a grid search tool (that goes through models, lr, etc.)
 
@@ -119,7 +120,7 @@ def main(args):
         return ds
 
     # prepare data
-    ds_train, ds_val, ds_test, class_names = prepare_data(args)
+    ds_train, ds_val, ds_test, class_names, label_counts = prepare_data(args)
     ds_train = fix_and_batch(ds_train)
     ds_val   = fix_and_batch(ds_val)
     ds_test  = fix_and_batch(ds_test) if args.test_dir is not None else None
@@ -127,7 +128,8 @@ def main(args):
     # set class weights to compensate for class imbalance
     class_weights = None
     if args.balance_class_weights:
-        raise NotImplementedError
+        n_data = sum(c for c in label_counts.values())
+        class_weights = [c/n_data for c in label_counts.values()]
 
     # define metrics
     metrics = {
