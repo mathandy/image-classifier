@@ -126,6 +126,7 @@ def main(args):
     # set class weights to compensate for class imbalance
     class_weights = None
     if not args.no_class_weights:
+        print(f"\nTrain Label Counts\n{label_counts}\n")
         class_weights = [1/c for c in label_counts.values()]
 
     # define metrics
