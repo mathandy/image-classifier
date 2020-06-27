@@ -34,7 +34,7 @@ def get_user_args():
         help='Resize all images to these dimensions (after augmentation).'
     )
     parser.add_argument(
-        '--model', default='inception_v3',
+        '--model', '-m', default='inception_v3',
         help='Name of TF Hub model to use.'
     )
     parser.add_argument(
