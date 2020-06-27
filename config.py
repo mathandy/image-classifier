@@ -42,9 +42,11 @@ def get_user_args():
         help='Do not use class weights to compensate for class imbalance.'
     )
     parser.add_argument(
-        '--logdir', '-l',
-        default=Path(gettempdir(), 'classifier-logs', str(time()).replace('.', '-')),
-        type=Path,
+        '--logdir', '-l', type=Path, default=None, # default set below
+        help='Name of TF Hub model to use.'
+    )
+    parser.add_argument(
+        '--run_name', '-n', type=Path, default=None, # default set below
         help='Name of TF Hub model to use.'
     )
     parser.add_argument(
@@ -60,5 +62,14 @@ def process_args(args):
     if args.image_dimensions is None:
         sz = tf_hub_model_input_size[args.model]
         args.image_dimensions = (sz, sz)
+
+    assert args.logdir is None or args.run_name is None
+    if args.logdir is None:
+        if args.run_name is None:
+            args.run_name = str(time()).replace('.', '-')
+        else:
+            from warnings import warn
+            warn("Using temp dir for named run.")
+        args.logdir = Path(gettempdir(), 'classifier-logs', args.run_name)
 
     return args

@@ -118,8 +118,8 @@ class Classifier:
                 val_results, val_loss, val_cm = self.score(validation_data)
                 val_acc = np.trace(val_cm) / np.array(val_cm).sum()
                 val_results.update({'Val Loss': val_loss,
-                                    'Confusion Matrix': val_cm,
-                                    'Sanity Accuracy': val_acc})
+                                    'Confusion Matrix': f'\n{val_cm}',
+                                    'Accuracy': val_acc})
                 elapsed, atime = time() - atime, time()
                 self.report(val_results,
                             "Epoch {} ({:.3f} s) Validation Results"
@@ -142,6 +142,7 @@ class Classifier:
 
 
 def main(args):
+    start_time = time()
 
     # create logdir and record args
     args.logdir.mkdir(parents=True)
@@ -192,10 +193,12 @@ def main(args):
     # load_test
     if args.test_dir is not None:
         test_results, test_loss, test_cm = classifier.score(ds_test)
-        test_results.update({"Val Loss": test_loss})
-        print("\nValidation Results")
-        print('\n'.join(f'{k}: {v}' for k, v in test_results.items()))
-        print(f'Test Set Confusion Matrix:\n{test_cm}')
+        val_acc = np.trace(test_cm) / np.array(test_cm).sum()
+        test_results.update({'Val Loss': test_loss,
+                             'Confusion Matrix': f'\n{test_cm}',
+                             'Accuracy': val_acc,
+                             'Total Time': time() - start_time})
+        classifier.report(test_results, "Test Results")
 
 
 if __name__ == '__main__':
