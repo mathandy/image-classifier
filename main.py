@@ -3,13 +3,13 @@ from model import build_model
 import tensorflow as tf
 from pandas import DataFrame
 import numpy as np
-import os
+from pathlib import Path
+from time import time
 
 
 class Classifier:
     def __init__(self, model, optimizer, loss, metric_dict=None,
-                 class_weights=None, class_names=None,
-                 logdir=os.path.join('logs', 'tmp')):
+                 class_weights=None, class_names=None, logdir='logs'):
         self.model = model
         self.optimizer = optimizer
         self.loss = loss
@@ -19,9 +19,17 @@ class Classifier:
             self.class_weights = tf.constant(class_weights, dtype=tf.float32)
         self.metric_dict = metric_dict
         self.class_names = class_names
-        self.logdir = logdir
-        if logdir:
-            os.makedirs(logdir, exist_ok=True)
+        self.logdir = Path(logdir)
+        self.min_val_loss = np.inf
+        self.patience = 10
+        self.log = Path(self.logdir, 'log.txt')
+
+    def report(self, results_dict, title=None):
+        s = f"\n{title}\n"
+        s += '\n'.join(f'{k}: {v}' for k, v in results_dict.items())
+        print(s)
+        with self.log.open('a+') as f:
+            f.write(s)
 
     def update_metrics(self, y_true, y_pred):
         for metric_name, metric in self.metric_dict.items():
@@ -88,6 +96,7 @@ class Classifier:
         return tf.gather(self.class_weights, y_true)
 
     def train(self, training_data, validation_data=None, epochs=1):
+        atime = time()
         for epoch in range(epochs):
             print("\nStart of epoch %d" % (epoch,))
             epoch_train_loss = 0
@@ -100,26 +109,32 @@ class Classifier:
 
             train_results = self.get_metric_results(reset=True)
             train_results.update({'Loss': epoch_train_loss})
-            s = "\nTraining Results\n"
-            s += '\n'.join(f'{k}: {v}' for k, v in train_results.items())
-            print(s)
-            with open(os.path.join(self.logdir, 'log.txt'), 'a+') as f:
-                f.write(s)
+            elapsed, atime = atime - time(), time()
+            self.report(train_results,
+                        "Epoch {} ({:.3f} s) Training Results"
+                        "".format(epoch, time))
 
             if validation_data is not None:
                 val_results, val_loss, val_cm = self.score(validation_data)
-                val_results.update({"Val Loss": val_loss})
-                s = "\n\nValidation Results\n"
-                s += '\n'.join(f'{k}: {v}' for k, v in val_results.items())
-                s += f'\nValidation Confusion Matrix:\n{val_cm}\n'
-                cm = np.array(val_cm)
-                s += "Sanity Accuracy:\n"
-                s += str(sum(cm[i, i] for i in range(cm.shape[0])) / cm.sum())
-                print(s)
-                with open(os.path.join(self.logdir, 'log.txt'), 'a+') as f:
-                    f.write(s)
+                val_acc = np.trace(val_cm) / np.array(val_cm).sum()
+                val_results.update({'Val Loss': val_loss,
+                                    'Confusion Matrix': val_cm,
+                                    'Sanity Accuracy': val_acc})
+                self.report(val_results,
+                            "Epoch {} ({:.3f} s) Validation Results"
+                            "".format(epoch, time))
 
-# TODO: See batch norm todo above
+                # early stopping and model saving
+                if val_acc > 0.8 and val_loss < self.min_val_loss:
+                    # save model
+                    self.min_val_loss = val_loss
+                    self.model.save(Path(self.logdir, 'model.h5'))
+                else:
+                    if self.min_val_loss < np.inf and self.patience == 0:
+                        break  # stop early
+                    self.patience -= 1
+
+# TODO: See batch norm todo above (or maybe i want them to train)
 # TODO: check that implementation of class weights doesn't have softmax issue
 # TODO: finish adding the rest of the tf hub models
 # TODO: build a grid search tool (that goes through models, lr, etc.)
@@ -127,12 +142,16 @@ class Classifier:
 
 def main(args):
 
+    # create logdir and record args
+    args.logdir.mkdir(parents=True)
+    with Path(args.logdir, 'args.txt').open('a+') as f:
+        f.write('\n'.join(f'{k}:{v}' for k, v in vars(args).items()))
+
+    # prep data
     def fix_and_batch(ds):
         ds = ds.map(lambda image, label, file_path: (image, label))
         ds = ds.batch(args.batch_size)
         return ds
-
-    # prepare data
     ds_train, ds_val, ds_test, class_names, label_counts = prepare_data(args)
     ds_train = fix_and_batch(ds_train)
     ds_val   = fix_and_batch(ds_val)
@@ -146,7 +165,7 @@ def main(args):
 
     # define metrics
     metrics = {
-        'Accuracy': tf.keras.metrics.BinaryAccuracy,
+        # 'Accuracy': tf.keras.metrics.BinaryAccuracy,
     }
 
     # build model
@@ -154,11 +173,12 @@ def main(args):
     loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
     classifier = Classifier(
         model=model,
-        optimizer=tf.keras.optimizers.Adam(),
+        optimizer=tf.keras.optimizers.Adam(learning_rate=args.learning_rate),
         loss=loss,
         class_weights=class_weights,
         class_names=class_names,
         metric_dict=metrics,
+        logdir=args.logdir,
     )
 
     # train model

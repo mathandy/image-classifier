@@ -26,7 +26,7 @@ def get_user_args():
         help='Batch size.'
     )
     parser.add_argument(
-        '--epochs', default=30, type=int,
+        '--epochs', default=1000, type=int,
         help='Number of epochs to train for.'
     )
     parser.add_argument(
@@ -43,7 +43,7 @@ def get_user_args():
     )
     parser.add_argument(
         '--logdir', '-l',
-        default=Path(gettempdir(), 'classifier-logs', str(time).replace('.', '-')),
+        default=Path(gettempdir(), 'classifier-logs', str(time()).replace('.', '-')),
         type=Path,
         help='Name of TF Hub model to use.'
     )
