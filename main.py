@@ -21,7 +21,7 @@ class Classifier:
         self.class_names = class_names
         self.logdir = Path(logdir)
         self.min_val_loss = np.inf
-        self.patience = 10
+        self.patience = 5
         self.log = Path(self.logdir, 'log.txt')
 
     def report(self, results_dict, title=None):
@@ -109,10 +109,10 @@ class Classifier:
 
             train_results = self.get_metric_results(reset=True)
             train_results.update({'Loss': epoch_train_loss})
-            elapsed, atime = atime - time(), time()
+            elapsed, atime = time() - atime, time()
             self.report(train_results,
                         "Epoch {} ({:.3f} s) Training Results"
-                        "".format(epoch, time))
+                        "".format(epoch, atime))
 
             if validation_data is not None:
                 val_results, val_loss, val_cm = self.score(validation_data)
@@ -120,9 +120,10 @@ class Classifier:
                 val_results.update({'Val Loss': val_loss,
                                     'Confusion Matrix': val_cm,
                                     'Sanity Accuracy': val_acc})
+                elapsed, atime = time() - atime, time()
                 self.report(val_results,
                             "Epoch {} ({:.3f} s) Validation Results"
-                            "".format(epoch, time))
+                            "".format(epoch, atime))
 
                 # early stopping and model saving
                 if val_acc > 0.8 and val_loss < self.min_val_loss:
