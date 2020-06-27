@@ -76,4 +76,4 @@ tf_hub_model_input_size = dict((name, sz) for name, _, sz in tf_hub_models)
 
 if __name__ == '__main__':
     for x in tf_hub_models:
-        print(x)
+        print(x.name)
