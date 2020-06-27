@@ -22,6 +22,7 @@ class Classifier:
         self.logdir = Path(logdir)
         self.min_val_loss = np.inf
         self.patience = 5
+        self.remaining_patience = self.patience
         self.log = Path(self.logdir, 'log.txt')
 
     def report(self, results_dict, title=None):
@@ -126,14 +127,15 @@ class Classifier:
                             "".format(epoch, atime))
 
                 # early stopping and model saving
-                if val_acc > 0.8 and val_loss < self.min_val_loss:
-                    # save model
+                if val_loss < self.min_val_loss:
                     self.min_val_loss = val_loss
-                    self.model.save(Path(self.logdir, 'model.h5'))
+                    self.remaining_patience = self.patience
+                    if val_acc > 0.8:
+                        self.model.save(Path(self.logdir, 'model.h5'))
                 else:
-                    if self.min_val_loss < np.inf and self.patience == 0:
+                    if self.remaining_patience == 0:
                         break  # stop early
-                    self.patience -= 1
+                    self.remaining_patience -= 1
 
 # TODO: See batch norm todo above (or maybe i want them to train)
 # TODO: check that implementation of class weights doesn't have softmax issue
