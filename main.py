@@ -159,7 +159,7 @@ def main(args):
     ds_train, ds_val, ds_test, class_names, label_counts = prepare_data(args)
     ds_train = fix_and_batch(ds_train)
     ds_val   = fix_and_batch(ds_val)
-    ds_test  = fix_and_batch(ds_test) if args.test_dir is not None else None
+    ds_test  = fix_and_batch(ds_test)
 
     # set class weights to compensate for class imbalance
     class_weights = None
@@ -192,15 +192,23 @@ def main(args):
         epochs=args.epochs,
     )
 
-    # load_test
-    if args.test_dir is not None:
-        test_results, test_loss, test_cm = classifier.score(ds_test)
-        val_acc = np.trace(test_cm) / np.array(test_cm).sum()
-        test_results.update({'Val Loss': test_loss,
-                             'Confusion Matrix': f'\n{test_cm}',
-                             'Accuracy': val_acc,
-                             'Total Time': time() - start_time})
-        classifier.report(test_results, "Test Results")
+    # test
+    best_model_path = Path(args.logdir, 'model.h5')
+    try:
+        classifier.model.load_weights(best_model_path)
+    except FileNotFoundError:
+        print(f"Warning:  "
+              f"Best model weights not found, this is to be expected if "
+              f"the model never reached 80% validation accuracy.  "
+              f"Path checked: {best_model_path}")
+
+    test_results, test_loss, test_cm = classifier.score(ds_test)
+    test_acc = np.trace(test_cm) / np.array(test_cm).sum()
+    test_results.update({'Test Loss': test_loss,
+                         'Confusion Matrix': f'\n{test_cm}',
+                         'Accuracy': test_acc,
+                         'Total Time': time() - start_time})
+    classifier.report(test_results, "Test Results")
 
 
 if __name__ == '__main__':

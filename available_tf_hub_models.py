@@ -84,7 +84,7 @@ tf_hub_models += \
 # add BiT-S (ImageNet-1k) and BiT-M (ImageNet-21k) models (expected size unkown)
 tf_hub_models += [
     tf_hub_model('BiT-S-R50x1', 224, 'https://tfhub.dev/google/bit/s-r50x1/1'),
-    tf_hub_model('BiT-S-R50x3', 224, 'https://tfhub.dev/google/bit/m-r50x3/1'),
+    tf_hub_model('BiT-S-R50x3', 224, 'https://tfhub.dev/google/bit/s-r50x3/1'),
     tf_hub_model('BiT-S-R101x1', 224, 'https://tfhub.dev/google/bit/s-r101x1/1'),
     tf_hub_model('BiT-S-R101x3', 224, 'https://tfhub.dev/google/bit/s-r101x3/1'),
     tf_hub_model('BiT-S-R152x4', 224, 'https://tfhub.dev/google/bit/s-r152x4/1'),

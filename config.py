@@ -16,13 +16,25 @@ def get_user_args():
     parser.add_argument(
         '--val_part', default=0.1, type=float,
         help='Portion of training images to reserve for validation.'
+             'Alternatively, use the val_dir argument.'
+    )
+    parser.add_argument(
+        '--test_part', default=0.1, type=float,
+        help='Portion of training images to reserve for the final test. '
+             'Alternatively, use the test_dir argument.'
+    )
+    parser.add_argument(
+        '--val_dir', default=None,
+        help='Path to subdirectory-labeled image directory for testing.'
+             'Alternatively, use the val_part argument.'
     )
     parser.add_argument(
         '--test_dir', default=None,
         help='Path to subdirectory-labeled image directory for testing.'
+             'Alternatively, use the test_part argument.'
     )
     parser.add_argument(
-        '--batch_size', default=128,
+        '--batch_size', default=128, type=int,
         help='Batch size.'
     )
     parser.add_argument(
@@ -70,6 +82,6 @@ def process_args(args):
         else:
             from warnings import warn
             warn("Using temp dir for named run.")
-        args.logdir = Path(gettempdir(), 'classifier-logs', args.run_name)
+        args.logdir = Path('..', 'classifier-logs', args.run_name)
 
     return args

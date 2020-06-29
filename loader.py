@@ -90,6 +90,9 @@ def load(file_paths, augmentation_func=None, size=None, shuffle_buffer=False):
 
 
 def prepare_data(args):
+    assert args.test_dir and args.test_part == 0 or 0 < args.test_part < 1
+    assert args.val_dir and args.val_part == 0 or 0 < args.test_part < 1
+    assert args.test_part + args.val_part < 1
 
     file_paths = get_image_filepaths(image_dir=args.image_dir)
     np.random.shuffle(file_paths)
@@ -97,22 +100,36 @@ def prepare_data(args):
     class_names = list(set(labels))
 
     # split file paths into train and val sets
-    train_file_paths, val_file_paths = [], []
+    train_file_paths, val_file_paths, test_file_paths = [], [], []
     label_distribution, train_label_distribution = {}, {}
     for label in class_names:
         label_fps = [fp for fp, l in zip(file_paths, labels) if l == label]
 
-        n_train = int(np.ceil(len(label_fps) * (1 - args.val_part)))
+        n_val = int(np.ceil(len(label_fps) * args.val_part))
+        n_test = int(np.ceil(len(label_fps) * args.test_part))
+        n_train = len(label_fps) - n_val - n_test
+
         train_file_paths += label_fps[:n_train]
-        val_file_paths += label_fps[n_train:]
-        assert len(val_file_paths) > 0
+        if args.val_part > 0:
+            assert n_val > 0
+            val_file_paths += label_fps[n_train:n_train + n_val]
+
+        if args.test_part > 0:
+            assert n_test > 0
+            test_file_paths += label_fps[n_train + n_val:]
 
         # record how many examples there are of each label
         label_distribution[label] = len(label_fps)
         train_label_distribution[label] = n_train
 
+    if args.val_dir is not None:
+        val_file_paths = get_image_filepaths(image_dir=args.val_dir)
+    if args.test_dir is not None:
+        test_file_paths = get_image_filepaths(image_dir=args.test_dir)
+
     np.random.shuffle(train_file_paths)
     np.random.shuffle(val_file_paths)
+    np.random.shuffle(test_file_paths)
 
     ds_train, train_class_names = load(
         file_paths=train_file_paths,
@@ -128,16 +145,12 @@ def prepare_data(args):
         shuffle_buffer=False,
     )
 
-    if args.test_dir is not None:
-        test_file_paths = get_image_filepaths(image_dir=args.test_dir)
-        ds_test, test_class_names = load(
-            file_paths=test_file_paths,
-            augmentation_func=None,
-            size=args.image_dimensions,
-            shuffle_buffer=False,
-        )
-    else:
-        ds_test, test_class_names = ds_val, val_class_names
+    ds_test, test_class_names = load(
+        file_paths=test_file_paths,
+        augmentation_func=None,
+        size=args.image_dimensions,
+        shuffle_buffer=False,
+    )
 
     assert set(test_class_names) == set(val_class_names) == \
            set(train_class_names) == set(class_names)
