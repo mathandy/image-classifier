@@ -9,6 +9,16 @@ from time import time
 import pickle
 
 
+class Args(object):
+    """Used to convert dict objects to namespace-like objects
+
+    Credit:
+        https://stackoverflow.com/questions/2597278
+    """
+    def __init__(self, dictionary):
+        self.__dict__.update(dictionary)
+
+
 def prepare_test_data(image_dir, image_dimensions):
 
     file_paths = get_image_filepaths(image_dir=image_dir)
@@ -62,7 +72,7 @@ def score(train_args, model_dir, image_dir, batch_size=None):
         except:
             pass
 
-    with open(Path(model_dir, 'evaluation-results.txt')) as f:
+    with open(Path(model_dir, 'evaluation-results.txt'), 'w') as f:
         f.write(','.join(
             ['file_path', 'ground truth'] + list(class_names)
         ) + '\n')
@@ -83,7 +93,8 @@ def score(train_args, model_dir, image_dir, batch_size=None):
     test_results.update({'Loss': test_loss,
                          'Confusion Matrix': f'\n{test_cm}',
                          'Accuracy': test_acc})
-    classifier.report(test_results, "Test Results")
+    classifier.report(test_results, "Test Results",
+                      write_to_log=Path(model_dir, 'evaluation-scores.txt'))
 
 
 def get_user_args():
@@ -92,11 +103,11 @@ def get_user_args():
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '--model_dir', '-l', type=Path, default=None,  # default set below
+        '--model_dir', '-m', type=Path, default=None,  # default set below
         help='The directly containing train_args.p and model.h5.'
     )
     parser.add_argument(
-        '--image_dir', '-l', type=Path, default=None,  # default set below
+        '--image_dir', '-i', type=Path, default=None,  # default set below
         help='Path to a subdirectory-labeled image directory.'
     )
     args = parser.parse_args()
@@ -106,10 +117,15 @@ def get_user_args():
 def get_train_args(logdir):
     with Path(logdir, 'train_args.p').open('rb') as f:
         train_args = pickle.load(f)
+
+    if isinstance(train_args, dict):
+        train_args = Args(train_args)
     return train_args
 
 
 if __name__ == '__main__':
     eval_args_ = get_user_args()
-    train_args_ = get_train_args(eval_args_)
-    score(train_args=train_args_, eval_args=eval_args_)
+    train_args_ = get_train_args(eval_args_.model_dir)
+    score(train_args=train_args_,
+          model_dir=eval_args_.model_dir,
+          image_dir=eval_args_.image_dir)

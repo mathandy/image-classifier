@@ -26,12 +26,17 @@ class Classifier:
         self.remaining_patience = self.patience
         self.log = Path(self.logdir, 'log.txt')
 
-    def report(self, results_dict, title=None):
+    def report(self, results_dict, title=None, write_to_log=True):
         s = f"\n{title}\n"
         s += '\n'.join(f'{k}: {v}' for k, v in results_dict.items())
         print(s)
-        with self.log.open('a+') as f:
-            f.write(s)
+        if write_to_log:
+            if isinstance(write_to_log, str) or isinstance(write_to_log, Path):
+                file_path = Path(write_to_log)
+            else:
+                file_path = self.log
+            with file_path.open('a+') as f:
+                f.write(s)
 
     def update_metrics(self, y_true, y_pred):
         for metric_name, metric in self.metric_dict.items():
