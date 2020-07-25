@@ -81,7 +81,8 @@ def score(train_args, model_dir, image_dir, batch_size=1):
 
     with open(Path(model_dir, 'evaluation-results.txt'), 'w') as f:
         f.write(','.join(
-            ['file_path', 'ground truth', 'predicted_label'] + list(class_names)
+            ['is_correct', 'file_path', 'ground truth', 'prediction'] +
+            [f'{class_name} prob.' for class_name in class_names]
         ) + '\n')
         for image_batch, label_batch, file_path_batch in ds:
             # pass through model
@@ -93,13 +94,16 @@ def score(train_args, model_dir, image_dir, batch_size=1):
                          file_path_batch.numpy(),
                          probabilities_batch.numpy())
             for label, file_path, probabilities in zipped:
+                predicted_label = probabilities.argmax()
                 fp = Path(file_path.decode())
                 fp = str(Path(fp.parent.name, fp.name))
                 class_name = class_names[label]
-                predicted_label = class_names[probabilities.argmax()]
+                predicted_class = class_names[predicted_label]
+                is_correct = str(int(label) == int(predicted_label))
                 readable_probabilities = ['%f' % p for p in probabilities]
                 f.write(','.join(
-                    [fp, class_name, predicted_label] + readable_probabilities
+                    [is_correct, fp, class_name, predicted_class] +
+                    readable_probabilities
                 ) + '\n')
 
     # report
