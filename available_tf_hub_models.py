@@ -39,10 +39,6 @@ _mobilnet_models = [
     (35, 96),
 ]
 
-_efficientnet_models = [
-
-]
-
 TFHubModel = namedtuple('TF_Hub_Model', ['name', 'url', 'input_size'])
 
 
@@ -65,7 +61,7 @@ for width_multiplier, input_size in _mobilnet_models:
 tf_hub_models += [
     tf_hub_model("inception_v3", 96),  # online claims this is 299
 
-    tf_hub_model("resnet_v2_50", 224),
+    tf_hub_model("resnet_v2_50", 96),
     tf_hub_model("resnet_v2_101", 224),
     tf_hub_model("resnet_v2_152", 224),
 

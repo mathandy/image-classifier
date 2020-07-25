@@ -5,6 +5,7 @@ from pandas import DataFrame
 import numpy as np
 from pathlib import Path
 from time import time
+import pickle as pickle
 
 
 class Classifier:
@@ -146,10 +147,12 @@ class Classifier:
 def main(args):
     start_time = time()
 
-    # create logdir and record args
+    # create logdir and record args (in both txt and pickle format)
     args.logdir.mkdir(parents=True)
-    with Path(args.logdir, 'args.txt').open('a+') as f:
+    with Path(args.logdir, 'train_args.txt').open('a+') as f:
         f.write('\n'.join(f'{k}:{v}' for k, v in vars(args).items()))
+    with Path(args.logdir, 'train_args.p').open('wb') as f:
+        pickle.dump(args, f)
 
     # prep data
     def fix_and_batch(ds):
@@ -195,8 +198,8 @@ def main(args):
     # test
     best_model_path = Path(args.logdir, 'model.h5')
     try:
-        classifier.model.load_weights(best_model_path)
-    except FileNotFoundError:
+        classifier.model.load_weights(str(best_model_path))
+    except (FileNotFoundError, OSError):
         print(f"Warning:  "
               f"Best model weights not found, this is to be expected if "
               f"the model never reached 80% validation accuracy.  "
@@ -205,9 +208,9 @@ def main(args):
     test_results, test_loss, test_cm = classifier.score(ds_test)
     test_acc = np.trace(test_cm) / np.array(test_cm).sum()
     test_results.update({'Test Loss': test_loss,
-                         'Confusion Matrix': f'\n{test_cm}',
-                         'Accuracy': test_acc,
-                         'Total Time': time() - start_time})
+                         'Test Confusion Matrix': f'\n{test_cm}',
+                         'Test Accuracy': test_acc,
+                         'Total Train+Test Time': time() - start_time})
     classifier.report(test_results, "Test Results")
 
 
