@@ -169,6 +169,10 @@ def main(args):
     ds_val   = fix_and_batch(ds_val)
     ds_test  = fix_and_batch(ds_test)
 
+    # save class names
+    with Path(args.logdir, 'class_names.txt').open('w') as f:
+        f.write(','.join(class_names))
+
     # set class weights to compensate for class imbalance
     class_weights = None
     if not args.no_class_weights:

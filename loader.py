@@ -48,9 +48,11 @@ def shape_setter(shape):
     return shape_setter_func
 
 
-def load(file_paths, augmentation_func=None, size=None, shuffle_buffer=False):
+def load(file_paths, augmentation_func=None, size=None, shuffle_buffer=False,
+         class_names=None):
     labels = [filepath_to_label(fp) for fp in file_paths]
-    class_names = list(set(labels))
+    if class_names is None:
+        class_names = list(set(labels))
     label_encoder = dict((label, k) for k, label in enumerate(class_names))
     encoded_labels = [label_encoder[label] for label in labels]
 

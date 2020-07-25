@@ -18,11 +18,12 @@ class Args(object):
         self.__dict__.update(dictionary)
 
 
-def prepare_test_data(image_dir, image_dimensions):
+def prepare_test_data(image_dir, image_dimensions, class_names=None):
 
     file_paths = get_image_filepaths(image_dir=image_dir)
     labels = [filepath_to_label(fp) for fp in file_paths]
-    class_names = list(set(labels))
+    if class_names is None:
+        class_names = list(set(labels))
     label_distribution = dict((l, labels.count(l)) for l in class_names)
 
     ds, class_names = load(
@@ -30,6 +31,7 @@ def prepare_test_data(image_dir, image_dimensions):
         augmentation_func=None,
         size=image_dimensions,
         shuffle_buffer=False,
+        class_names=class_names
     )
 
     return ds, class_names, label_distribution
@@ -37,9 +39,14 @@ def prepare_test_data(image_dir, image_dimensions):
 
 def score(train_args, model_dir, image_dir, batch_size=1):
 
-    ds, class_names, label_counts = prepare_test_data(
+    # get class names from model dir (to preserve ordering)
+    with Path(model_dir, 'class_names.txt').open() as f:
+        class_names = f.read().strip().split(',')
+
+    ds, _, label_counts = prepare_test_data(
         image_dir=image_dir,
         image_dimensions=train_args.image_dimensions,
+        class_names=class_names
     )
     ds = ds.batch(batch_size)
 
@@ -72,7 +79,6 @@ def score(train_args, model_dir, image_dir, batch_size=1):
         except:
             pass
 
-
     with open(Path(model_dir, 'evaluation-results.txt'), 'w') as f:
         f.write(','.join(
             ['file_path', 'ground truth', 'predicted_label'] + list(class_names)
@@ -97,6 +103,7 @@ def score(train_args, model_dir, image_dir, batch_size=1):
                 ) + '\n')
 
     # report
+    ds = ds.map(lambda image, label, file_path: (image, label))
     test_results, test_loss, test_cm = classifier.score(ds)
     test_acc = np.trace(test_cm) / np.array(test_cm).sum()
     test_results.update({'Loss': test_loss,
