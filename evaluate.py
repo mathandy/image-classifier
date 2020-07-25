@@ -35,12 +35,13 @@ def prepare_test_data(image_dir, image_dimensions):
     return ds, class_names, label_distribution
 
 
-def score(train_args, model_dir, image_dir, batch_size=None):
+def score(train_args, model_dir, image_dir, batch_size=1):
 
     ds, class_names, label_counts = prepare_test_data(
         image_dir=image_dir,
         image_dimensions=train_args.image_dimensions,
     )
+    ds = ds.batch(batch_size)
 
     # set class weights to compensate for class imbalance
     class_weights = None
@@ -71,25 +72,29 @@ def score(train_args, model_dir, image_dir, batch_size=None):
         except:
             pass
 
+
     with open(Path(model_dir, 'evaluation-results.txt'), 'w') as f:
         f.write(','.join(
-            ['file_path', 'ground truth'] + list(class_names)
+            ['file_path', 'ground truth', 'predicted_label'] + list(class_names)
         ) + '\n')
-        for image, label, file_path in ds:
+        for image_batch, label_batch, file_path_batch in ds:
             # pass through model
-            logits = classifier.model(np.expand_dims(image, 0))
-            probabilities = tf.squeeze(tf.nn.softmax(logits))
+            logits_batch = classifier.model(image_batch)
+            probabilities_batch = tf.nn.softmax(logits_batch)
 
             # parse and report results
-            readable_probabilities = ['%f' % p for p in probabilities.numpy()]
-            class_name = class_names[label.numpy()]
-            fp = Path(file_path.numpy().decode())
-            fp = str(Path(fp.parent.name, fp.name))
-            f.write(','.join([fp, class_name] + readable_probabilities) + '\n')
-
-    # fix and batch
-    ds = ds.map(lambda image, label, file_path: (image, label))
-    ds = ds.batch(batch_size)
+            zipped = zip(label_batch.numpy(),
+                         file_path_batch.numpy(),
+                         probabilities_batch.numpy())
+            for label, file_path, probabilities in zipped:
+                fp = Path(file_path.decode())
+                fp = str(Path(fp.parent.name, fp.name))
+                class_name = class_names[label]
+                predicted_label = class_names[probabilities.argmax()]
+                readable_probabilities = ['%f' % p for p in probabilities]
+                f.write(','.join(
+                    [fp, class_name, predicted_label] + readable_probabilities
+                ) + '\n')
 
     # report
     test_results, test_loss, test_cm = classifier.score(ds)
@@ -113,6 +118,10 @@ def get_user_args():
     parser.add_argument(
         '--image_dir', '-i', type=Path, default=None,  # default set below
         help='Path to a subdirectory-labeled image directory.'
+    )
+    parser.add_argument(
+        '--batch_size', '-b', type=int, default=128,  # default set below
+        help='Batch size to use for inference.'
     )
     args = parser.parse_args()
     return args
