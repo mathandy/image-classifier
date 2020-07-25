@@ -1,12 +1,11 @@
 from main import Classifier
 from loader import get_image_filepaths, filepath_to_label, load
 from model import build_model
-import tensorflow as tf
-from pandas import DataFrame
-import numpy as np
+
 from pathlib import Path
-from time import time
 import pickle
+import numpy as np
+import tensorflow as tf
 
 
 class Args(object):
@@ -77,11 +76,16 @@ def score(train_args, model_dir, image_dir, batch_size=None):
             ['file_path', 'ground truth'] + list(class_names)
         ) + '\n')
         for image, label, file_path in ds:
-            logits = classifier.model(tf.expand_dims(0, image))
+            # pass through model
+            logits = classifier.model(np.expand_dims(image, 0))
             probabilities = tf.squeeze(tf.nn.softmax(logits))
-            f.write(','.join(
-                [file_path.numpy()] + list(probabilities.numpy())
-            ) + '\n')
+
+            # parse and report results
+            readable_probabilities = ['%f' % p for p in probabilities.numpy()]
+            class_name = class_names[label.numpy()]
+            fp = Path(file_path.numpy().decode())
+            fp = str(Path(fp.parent.name, fp.name))
+            f.write(','.join([fp, class_name] + readable_probabilities) + '\n')
 
     # fix and batch
     ds = ds.map(lambda image, label, file_path: (image, label))
