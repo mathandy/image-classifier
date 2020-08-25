@@ -35,7 +35,7 @@ def get_user_args():
     )
     parser.add_argument(
         '--logdir', '-l', type=Path, default=None,  # default set below
-        help='Name of TF Hub model to use.'
+        help='Where to store output.'
     )
     parser.add_argument(
         '--run_name', '-n', type=Path, default=None,  # default set below
@@ -54,7 +54,7 @@ def get_user_args():
         help='Resize all images to these dimensions (after augmentation).'
     )
     parser.add_argument(
-        '--model', '-m', default='inception_v3',
+        '--model', '-m', default='BiT-M-R101x1',
         help='Name of TF Hub model to use.'
     )
     parser.add_argument(
