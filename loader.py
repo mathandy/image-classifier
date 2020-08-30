@@ -4,9 +4,10 @@ from pathlib import Path
 from os import sep as file_path_seperator
 import numpy as np
 import tensorflow as tf
-from imageio import imread
+# from imageio import imread
 
 tfds = tf.data.Dataset
+MAP_PARALLELISM = tf.data.experimental.AUTOTUNE
 
 
 def filepath_to_label(fp):
@@ -48,8 +49,8 @@ def shape_setter(shape):
     return shape_setter_func
 
 
-def load(file_paths, augmentation_func=None, size=None, shuffle_buffer=False,
-         class_names=None):
+def load(file_paths, augmentation_func=None, size=None, class_names=None,
+         include_filepaths=False):
     labels = [filepath_to_label(fp) for fp in file_paths]
     if class_names is None:
         class_names = list(set(labels))
@@ -61,14 +62,23 @@ def load(file_paths, augmentation_func=None, size=None, shuffle_buffer=False,
     ds_labels = tfds.from_tensor_slices(encoded_labels)
 
     if augmentation_func is None:
-        ds_images = ds_file_paths.map(load_image)
+        ds_images = ds_file_paths.map(load_image, num_parallel_calls=MAP_PARALLELISM)
     else:
-        def generate_augmented_epoch():
-            image_generator = map(imread, file_paths)
-            return map(augmentation_func, image_generator)
-        ds_images = tfds.from_generator(generate_augmented_epoch, tf.float32)
+        ds_images = ds_file_paths.map(load_image, num_parallel_calls=MAP_PARALLELISM)
+        ds_images = ds_images.cache()
+        ds_images = ds_images.map(
+            map_func=lambda img: tf.numpy_function(func=augmentation_func,
+                                                   inp=[img], Tout=[tf.uint8]),
+            num_parallel_calls=MAP_PARALLELISM
+        )
+    # else:
+    #     def generate_augmented_epoch():
+    #         image_generator = map(imread, file_paths)
+    #         return map(augmentation_func, image_generator)
+    #     ds_images = tfds.from_generator(generate_augmented_epoch, tf.float32)
 
-    ds_images = ds_images.map(shape_setter([None, None, 3]))
+    ds_images = ds_images.map(shape_setter([None, None, 3]),
+                              num_parallel_calls=MAP_PARALLELISM)
 
     if size is not None:
         @tf.function
@@ -76,18 +86,25 @@ def load(file_paths, augmentation_func=None, size=None, shuffle_buffer=False,
             return tf.image.resize(img, list(size))
 
         # from IPython import embed;embed()  ### DEBUG
-        ds_images = ds_images.map(resize)
-        ds_images = ds_images.map(shape_setter(list(size) + [3]))
+        # ds_images = ds_images.map(resize, num_parallel_calls=MAP_PARALLELISM)
+        ds_images = ds_images.map(lambda img: tf.image.resize(img, list(size)),
+                                  num_parallel_calls=MAP_PARALLELISM)
+        ds_images = ds_images.map(shape_setter(list(size) + [3]),
+                                  num_parallel_calls=MAP_PARALLELISM)
 
     # scale pixel values to [0, 1]
     # see the common image input conventions
     # https://www.tensorflow.org/hub/common_signatures/images#input
-    ds_images = ds_images.map(lambda img: tf.image.convert_image_dtype(img, tf.float32))
+    ds_images = ds_images.map(
+        map_func=lambda img: tf.image.convert_image_dtype(img, tf.float32),
+        num_parallel_calls=MAP_PARALLELISM
+    )
 
     # zip, shuffle, batch, and return
-    ds = tfds.zip((ds_images, ds_labels, ds_file_paths))
-    if shuffle_buffer is not False:
-        ds = ds.shuffle(shuffle_buffer)
+    if include_filepaths:
+        ds = tfds.zip((ds_images, ds_labels, ds_file_paths))
+    else:
+        ds = tfds.zip((ds_images, ds_labels))
     return ds, class_names
 
 
@@ -137,25 +154,46 @@ def prepare_data(args):
         file_paths=train_file_paths,
         augmentation_func=augment,
         size=args.image_dimensions,
-        shuffle_buffer=min(10 * args.batch_size, len(train_file_paths)),
     )
 
     ds_val, val_class_names = load(
         file_paths=val_file_paths,
         augmentation_func=None,
         size=args.image_dimensions,
-        shuffle_buffer=False,
     )
 
     ds_test, test_class_names = load(
         file_paths=test_file_paths,
         augmentation_func=None,
         size=args.image_dimensions,
-        shuffle_buffer=False,
     )
 
     assert set(test_class_names) == set(val_class_names) == \
            set(train_class_names) == set(class_names)
+
+    ds_train = ds_train.shuffle(
+        buffer_size=min(10 * args.batch_size, len(train_file_paths)))
+
+    ds_train = ds_train.batch(args.batch_size)
+    ds_val   =   ds_val.batch(args.batch_size)
+    ds_test  =  ds_test.batch(args.batch_size)
+
+    def optimize(ds):
+        options = tf.data.Options()
+        options.experimental_threading.max_intra_op_parallelism = 1
+        ds = ds.with_options(options)
+        return ds
+
+    # ds_train = ds_train.optimize()
+    ds_val = ds_val.cache()
+
+    def count_batches(file_paths):
+        return int(np.ceil(len(file_paths)/args.batch_size))
+
+    # prefetch training and val sets, do not prefetch test set
+    # ds_train = ds_train.prefetch(count_batches(train_file_paths))
+    ds_train = ds_train.prefetch(tf.data.experimental.AUTOTUNE)
+    ds_val = ds_val.prefetch(count_batches(val_file_paths))
     return ds_train, ds_val, ds_test, class_names, train_label_distribution
 
 
@@ -174,8 +212,9 @@ def load_test(args):
         file_paths=file_paths,
         augmentation_func=augment,
         size=(100, 100),
-        shuffle_buffer=min(10 * args.batch_size, len(file_paths)),
+        include_filepaths=True,
     )
+    ds = ds.shuffle(buffer_size=min(10 * args.batch_size, len(file_paths)))
 
     for augmented_image, label, original_path in ds:
         print(f"label: {class_names[label]}\n"
@@ -191,7 +230,7 @@ def load_test(args):
         h = max(original_image.shape[0], augmented_image.shape[0])
         original_image = tf.image.resize_with_pad(original_image, h, w)
         augmented_image = tf.image.resize_with_pad(augmented_image, h, w)
-        # from IPython import embed; embed()  ### DEBUG
+
         # write a side-by-side image comparison to disk
         side_by_side = tf.concat([original_image, augmented_image], axis=1)
         side_by_side = tf.io.encode_jpeg(tf.cast(side_by_side, tf.uint8))

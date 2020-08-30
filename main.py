@@ -160,14 +160,8 @@ def main(args):
         pickle.dump(args, f)
 
     # prep data
-    def fix_and_batch(ds):
-        ds = ds.map(lambda image, label, file_path: (image, label))
-        ds = ds.batch(args.batch_size)
-        return ds
     ds_train, ds_val, ds_test, class_names, label_counts = prepare_data(args)
-    ds_train = fix_and_batch(ds_train)
-    ds_val   = fix_and_batch(ds_val)
-    ds_test  = fix_and_batch(ds_test)
+    # ds_val = ds_val.prefetch()
 
     # save class names
     with Path(args.logdir, 'class_names.txt').open('w') as f:
@@ -198,6 +192,7 @@ def main(args):
     )
 
     # train model
+    # with tf.profiler.experimental.Profile(str(args.logdir)):
     classifier.train(
         training_data=ds_train,
         validation_data=ds_val,

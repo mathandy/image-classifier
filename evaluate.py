@@ -30,7 +30,6 @@ def prepare_test_data(image_dir, image_dimensions, class_names=None):
         file_paths=file_paths,
         augmentation_func=None,
         size=image_dimensions,
-        shuffle_buffer=False,
         class_names=class_names
     )
 
