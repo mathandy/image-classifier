@@ -65,11 +65,21 @@ def get_user_args():
         '--learning_rate', '-r', default=0.001, type=float,
         help='Name of TF Hub model to use.'
     )
+    parser.add_argument(
+        '--benchmark_input', default=False, action='store_true',
+        help='Benchmark input pipeline.'
+    )
+    parser.add_argument(
+        '--test_load', default=False, action='store_true',
+        help='Show images (with augmentations).'
+    )
     args = parser.parse_args()
     return process_args(args)
 
 
 def process_args(args):
+
+    is_test = args.test_load or args.benchmark_input
 
     # image dimensions
     if args.image_dimensions is None:
@@ -77,8 +87,8 @@ def process_args(args):
         args.image_dimensions = (sz, sz)
 
     # logdir and run_name
-    assert args.logdir is None or args.run_name is None
-    if args.logdir is None:
+    assert args.logdir is None or args.run_name is None or is_test
+    if not is_test and args.logdir is None:
         if args.run_name is None:
             args.run_name = str(time()).replace('.', '-')
         else:
