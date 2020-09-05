@@ -36,6 +36,13 @@ def load_image(image_path):
 
 
 @tf.function
+def load_grayscale_image(image_path):
+    img = tf.io.read_file(image_path)
+    img = tf.io.decode_jpeg(img, channels=1)
+    return tf.stack([img, img, img], axis=2)
+
+
+@tf.function
 def extract_label(file_path):
     return tf.strings.split(file_path, sep=file_path_seperator)
 
@@ -50,7 +57,7 @@ def shape_setter(shape):
 
 
 def load(file_paths, augmentation_func=None, size=None, class_names=None,
-         include_filepaths=False):
+         include_filepaths=False, grayscale=False):
     labels = [filepath_to_label(fp) for fp in file_paths]
     if class_names is None:
         class_names = list(set(labels))
@@ -61,10 +68,11 @@ def load(file_paths, augmentation_func=None, size=None, class_names=None,
     ds_file_paths = tfds.from_tensor_slices(file_paths)
     ds_labels = tfds.from_tensor_slices(encoded_labels)
 
-    if augmentation_func is None:
+    if grayscale:
         ds_images = ds_file_paths.map(load_image, num_parallel_calls=MAP_PARALLELISM)
     else:
         ds_images = ds_file_paths.map(load_image, num_parallel_calls=MAP_PARALLELISM)
+    if augmentation_func is not None:
         ds_images = ds_images.cache()
         ds_images = ds_images.map(
             map_func=lambda img: tf.numpy_function(func=augmentation_func,
@@ -154,18 +162,21 @@ def prepare_data(args):
         file_paths=train_file_paths,
         augmentation_func=augment,
         size=args.image_dimensions,
+        grayscale=args.grayscale,
     )
 
     ds_val, val_class_names = load(
         file_paths=val_file_paths,
         augmentation_func=None,
         size=args.image_dimensions,
+        grayscale=args.grayscale,
     )
 
     ds_test, test_class_names = load(
         file_paths=test_file_paths,
         augmentation_func=None,
         size=args.image_dimensions,
+        grayscale=args.grayscale,
     )
 
     assert set(test_class_names) == set(val_class_names) == \
@@ -213,6 +224,7 @@ def load_test(args):
         augmentation_func=augment,
         size=(100, 100),
         include_filepaths=True,
+        grayscale=args.grayscale,
     )
     ds = ds.shuffle(buffer_size=min(10 * args.batch_size, len(file_paths)))
 
@@ -242,6 +254,30 @@ def load_test(args):
             return
 
 
+def benchmark_input(args):
+    from tensorflow_datasets.core import benchmark
+
+    ds_train, ds_val, ds_test, _, _ = prepare_data(args)
+
+    def report_stats(ds, report_title='Benchmark Statistics',
+                     num_iter=None, batch_size=args.batch_size):
+        stats = benchmark(ds, num_iter=num_iter, batch_size=batch_size)
+        print(f"\n{report_title}\n{'-'*len(report_title)}")
+        for k, v in stats.items():
+            if isinstance(v, dict):
+                print(f'{k}:')
+                for kk, vv in v.items():
+                    print(f'\t{kk}: {vv}')
+            else:
+                print(f'{k}: {v}')
+        return stats
+
+    report_stats(ds=ds_train, report_title="Train Statistics")
+    # report_stats(ds=ds_val, report_title="Val Statistics")
+    # report_stats(ds=ds_test, report_title="Test Statistics")
+    print()
+
+
 if __name__ == '__main__':
-    from config import get_user_args
-    load_test(get_user_args())
+    print("\nTo run load_test or benchmark use main.py and --test_load "
+          "or --benchmark_input respectively.\n")

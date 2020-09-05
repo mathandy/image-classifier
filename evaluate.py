@@ -18,7 +18,7 @@ class Args(object):
         self.__dict__.update(dictionary)
 
 
-def prepare_test_data(image_dir, image_dimensions, class_names=None):
+def prepare_test_data(image_dir, image_dimensions, class_names=None, grayscale=False):
 
     file_paths = get_image_filepaths(image_dir=image_dir)
     labels = [filepath_to_label(fp) for fp in file_paths]
@@ -30,7 +30,8 @@ def prepare_test_data(image_dir, image_dimensions, class_names=None):
         file_paths=file_paths,
         augmentation_func=None,
         size=image_dimensions,
-        class_names=class_names
+        class_names=class_names,
+        grayscale=grayscale,
     )
 
     return ds, class_names, label_distribution

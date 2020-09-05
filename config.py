@@ -14,6 +14,10 @@ def get_user_args():
         help='Path to subdirectory-labeled image directory.'
     )
     parser.add_argument(
+        '--grayscale', default=False, action='store_true',
+        help='Input images are grayscale.'
+    )
+    parser.add_argument(
         '--val_dir', default=None, type=Path,
         help='Path to subdirectory-labeled image directory for validation.'
              'Alternatively, use the val_part argument.'
