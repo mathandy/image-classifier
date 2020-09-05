@@ -18,9 +18,10 @@ def is_image(fp, extensions=('jpg', 'jpeg')):
     return Path(fp).suffix[1:] in extensions
 
 
-def get_image_filepaths(image_dir, extensions=('jpg', 'jpeg')):
+def get_image_filepaths(image_dir, png=False):
     """Get image file paths from directory of subdirectory-labeled images."""
 
+    extensions = ('png',) if png else ('jpg', 'jpeg')
     image_dir = Path(image_dir)
     assert image_dir.exists()
 
@@ -36,9 +37,23 @@ def load_image(image_path):
 
 
 @tf.function
+def load_png(image_path):
+    img = tf.io.read_file(image_path)
+    img = tf.io.decode_png(img, channels=3)
+    return img
+
+
+@tf.function
 def load_grayscale_image(image_path):
     img = tf.io.read_file(image_path)
     img = tf.io.decode_jpeg(img, channels=1)
+    return tf.stack([img, img, img], axis=2)
+
+
+@tf.function
+def load_grayscale_png(image_path):
+    img = tf.io.read_file(image_path)
+    img = tf.io.decode_png(img, channels=1)
     return tf.stack([img, img, img], axis=2)
 
 
@@ -57,7 +72,7 @@ def shape_setter(shape):
 
 
 def load(file_paths, augmentation_func=None, size=None, class_names=None,
-         include_filepaths=False, grayscale=False):
+         include_filepaths=False, grayscale=False, png=False):
     labels = [filepath_to_label(fp) for fp in file_paths]
     if class_names is None:
         class_names = list(set(labels))
@@ -69,9 +84,12 @@ def load(file_paths, augmentation_func=None, size=None, class_names=None,
     ds_labels = tfds.from_tensor_slices(encoded_labels)
 
     if grayscale:
-        ds_images = ds_file_paths.map(load_image, num_parallel_calls=MAP_PARALLELISM)
+        load_func = load_grayscale_png if png else load_grayscale_image
     else:
-        ds_images = ds_file_paths.map(load_image, num_parallel_calls=MAP_PARALLELISM)
+        load_func = load_png if png else load_image
+
+    ds_images = ds_file_paths.map(load_func, num_parallel_calls=MAP_PARALLELISM)
+
     if augmentation_func is not None:
         ds_images = ds_images.cache()
         ds_images = ds_images.map(
@@ -121,7 +139,7 @@ def prepare_data(args):
     assert args.val_dir and args.val_part == 0 or 0 < args.test_part < 1
     assert args.test_part + args.val_part < 1
 
-    file_paths = get_image_filepaths(image_dir=args.image_dir)
+    file_paths = get_image_filepaths(args.image_dir, args.png)
     np.random.shuffle(file_paths)
     labels = [filepath_to_label(fp) for fp in file_paths]
     class_names = list(set(labels))
@@ -150,9 +168,9 @@ def prepare_data(args):
         train_label_distribution[label] = n_train
 
     if args.val_dir is not None:
-        val_file_paths = get_image_filepaths(image_dir=args.val_dir)
+        val_file_paths = get_image_filepaths(args.val_dir, args.png)
     if args.test_dir is not None:
-        test_file_paths = get_image_filepaths(image_dir=args.test_dir)
+        test_file_paths = get_image_filepaths(args.test_dir, args.png)
 
     np.random.shuffle(train_file_paths)
     np.random.shuffle(val_file_paths)
@@ -163,6 +181,7 @@ def prepare_data(args):
         augmentation_func=augment,
         size=args.image_dimensions,
         grayscale=args.grayscale,
+        png=args.png,
     )
 
     ds_val, val_class_names = load(
@@ -170,6 +189,7 @@ def prepare_data(args):
         augmentation_func=None,
         size=args.image_dimensions,
         grayscale=args.grayscale,
+        png=args.png,
     )
 
     ds_test, test_class_names = load(
@@ -177,6 +197,7 @@ def prepare_data(args):
         augmentation_func=None,
         size=args.image_dimensions,
         grayscale=args.grayscale,
+        png=args.png,
     )
 
     assert set(test_class_names) == set(val_class_names) == \
@@ -216,7 +237,7 @@ def load_test(args):
 
     temp_image_file_path = str(Path(gettempdir(), 'temp_image.jpg'))
 
-    file_paths = get_image_filepaths(image_dir=args.image_dir)
+    file_paths = get_image_filepaths(args.image_dir, args.png)
     np.random.shuffle(file_paths)
 
     ds, class_names = load(
@@ -225,6 +246,7 @@ def load_test(args):
         size=(100, 100),
         include_filepaths=True,
         grayscale=args.grayscale,
+        png=args.png,
     )
     ds = ds.shuffle(buffer_size=min(10 * args.batch_size, len(file_paths)))
 

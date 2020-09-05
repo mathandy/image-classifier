@@ -18,9 +18,10 @@ class Args(object):
         self.__dict__.update(dictionary)
 
 
-def prepare_test_data(image_dir, image_dimensions, class_names=None, grayscale=False):
+def prepare_test_data(image_dir, image_dimensions, class_names=None,
+                      grayscale=False, png=False):
 
-    file_paths = get_image_filepaths(image_dir=image_dir)
+    file_paths = get_image_filepaths(image_dir, png)
     labels = [filepath_to_label(fp) for fp in file_paths]
     if class_names is None:
         class_names = list(set(labels))
@@ -32,12 +33,14 @@ def prepare_test_data(image_dir, image_dimensions, class_names=None, grayscale=F
         size=image_dimensions,
         class_names=class_names,
         grayscale=grayscale,
+        png=png,
     )
 
     return ds, class_names, label_distribution
 
 
-def score(train_args, model_dir, image_dir, batch_size=1, grayscale=False):
+def score(train_args, model_dir, image_dir, batch_size=1,
+          grayscale=False, png=False):
 
     # get class names from model dir (to preserve ordering)
     with Path(model_dir, 'class_names.txt').open() as f:
@@ -48,6 +51,7 @@ def score(train_args, model_dir, image_dir, batch_size=1, grayscale=False):
         image_dimensions=train_args.image_dimensions,
         class_names=class_names,
         grayscale=grayscale,
+        png=png,
     )
     ds = ds.batch(batch_size)
 
@@ -154,4 +158,5 @@ if __name__ == '__main__':
     score(train_args=train_args_,
           model_dir=eval_args_.model_dir,
           image_dir=eval_args_.image_dir,
-          grayscale=eval_args_.grayscale)
+          grayscale=eval_args_.grayscale,
+          png=eval_args_.png)

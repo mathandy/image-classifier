@@ -9,13 +9,17 @@ def get_user_args():
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '--image_dir', default=Path('../bug-data/Multi_Inverts_Master'),
+        '--image_dir', '-i', default=Path('../bug-data/Multi_Inverts_Master'),
         type=Path,
         help='Path to subdirectory-labeled image directory.'
     )
     parser.add_argument(
         '--grayscale', default=False, action='store_true',
         help='Input images are grayscale.'
+    )
+    parser.add_argument(
+        '--png', default=False, action='store_true',
+        help='Input images are PNGs (otherwise assumes JPEGs).'
     )
     parser.add_argument(
         '--val_dir', default=None, type=Path,
@@ -38,7 +42,7 @@ def get_user_args():
              'Alternatively, use the test_dir argument.'
     )
     parser.add_argument(
-        '--logdir', '-l', type=Path, default=None,  # default set below
+        '--logdir', '-o', type=Path, default=None,  # default set below
         help='Where to store output.'
     )
     parser.add_argument(
