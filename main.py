@@ -149,7 +149,7 @@ class Classifier:
 # TODO: build a grid search tool (that goes through models, lr, etc.)
 
 
-def main(args):
+def train_and_test(args):
     start_time = time()
 
     # create logdir and record args (in both txt and pickle format)
@@ -216,6 +216,17 @@ def main(args):
                          'Test Accuracy': test_acc,
                          'Total Train+Test Time': time() - start_time})
     classifier.report(test_results, "Test Results")
+
+
+def main(args):
+    if args.benchmark_input:
+        from loader import benchmark_input
+        benchmark_input(args)
+    elif args.test_load:
+        from loader import load_test
+        load_test(args)
+    else:
+        train_and_test(args)
 
 
 if __name__ == '__main__':
