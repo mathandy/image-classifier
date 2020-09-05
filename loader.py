@@ -30,7 +30,7 @@ def get_image_filepaths(image_dir, png=False):
 
 
 @tf.function
-def load_image(image_path):
+def load_jpeg(image_path):
     img = tf.io.read_file(image_path)
     img = tf.io.decode_jpeg(img, channels=3)
     return img
@@ -44,16 +44,16 @@ def load_png(image_path):
 
 
 @tf.function
-def load_grayscale_image(image_path):
+def load_grayscale_jpeg(image_path):
     img = tf.io.read_file(image_path)
-    img = tf.io.decode_jpeg(img, channels=1)
+    img = tf.squeeze(tf.io.decode_jpeg(img, channels=1))
     return tf.stack([img, img, img], axis=2)
 
 
 @tf.function
 def load_grayscale_png(image_path):
     img = tf.io.read_file(image_path)
-    img = tf.io.decode_png(img, channels=1)
+    img = tf.squeeze(tf.io.decode_png(img, channels=1))
     return tf.stack([img, img, img], axis=2)
 
 
@@ -84,9 +84,9 @@ def load(file_paths, augmentation_func=None, size=None, class_names=None,
     ds_labels = tfds.from_tensor_slices(encoded_labels)
 
     if grayscale:
-        load_func = load_grayscale_png if png else load_grayscale_image
+        load_func = load_grayscale_png if png else load_grayscale_jpeg
     else:
-        load_func = load_png if png else load_image
+        load_func = load_png if png else load_jpeg
 
     ds_images = ds_file_paths.map(load_func, num_parallel_calls=MAP_PARALLELISM)
 
@@ -256,7 +256,7 @@ def load_test(args):
               "pixel range: {} - {}".format(tf.reduce_min(augmented_image),
                                             tf.reduce_max(augmented_image)))
 
-        original_image = load_image(original_path)
+        original_image = load_jpeg(original_path)
         original_image = tf.cast(original_image, tf.uint8)
         augmented_image = tf.cast(augmented_image, tf.uint8)
 
