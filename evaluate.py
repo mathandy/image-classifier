@@ -37,7 +37,7 @@ def prepare_test_data(image_dir, image_dimensions, class_names=None, grayscale=F
     return ds, class_names, label_distribution
 
 
-def score(train_args, model_dir, image_dir, batch_size=1):
+def score(train_args, model_dir, image_dir, batch_size=1, grayscale=False):
 
     # get class names from model dir (to preserve ordering)
     with Path(model_dir, 'class_names.txt').open() as f:
@@ -46,7 +46,8 @@ def score(train_args, model_dir, image_dir, batch_size=1):
     ds, _, label_counts = prepare_test_data(
         image_dir=image_dir,
         image_dimensions=train_args.image_dimensions,
-        class_names=class_names
+        class_names=class_names,
+        grayscale=grayscale,
     )
     ds = ds.batch(batch_size)
 
@@ -152,4 +153,5 @@ if __name__ == '__main__':
     train_args_ = get_train_args(eval_args_.model_dir)
     score(train_args=train_args_,
           model_dir=eval_args_.model_dir,
-          image_dir=eval_args_.image_dir)
+          image_dir=eval_args_.image_dir,
+          grayscale=eval_args_.grayscale)
