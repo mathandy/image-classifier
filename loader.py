@@ -136,7 +136,7 @@ def load(file_paths, augmentation_func=None, size=None, class_names=None,
 
 def prepare_data(args):
     assert args.test_dir and args.test_part == 0 or 0 < args.test_part < 1
-    assert args.val_dir and args.val_part == 0 or 0 < args.test_part < 1
+    assert args.val_dir and args.val_part == 0 or 0 < args.val_part < 1
     assert args.test_part + args.val_part < 1
 
     file_paths = get_image_filepaths(args.image_dir, args.png)
