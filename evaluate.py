@@ -32,6 +32,7 @@ def prepare_test_data(image_dir, image_dimensions, class_names=None,
         augmentation_func=None,
         size=image_dimensions,
         class_names=class_names,
+        include_filepaths=True,
         grayscale=grayscale,
         png=png,
     )
@@ -138,6 +139,14 @@ def get_user_args():
     parser.add_argument(
         '--batch_size', '-b', type=int, default=128,  # default set below
         help='Batch size to use for inference.'
+    )
+    parser.add_argument(
+        '--grayscale', default=False, action='store_true',
+        help='Input images are grayscale.'
+    )
+    parser.add_argument(
+        '--png', default=False, action='store_true',
+        help='Input images are PNGs (otherwise assumes JPEGs).'
     )
     args = parser.parse_args()
     return args
