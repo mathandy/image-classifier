@@ -149,7 +149,7 @@ class Classifier:
 # TODO: build a grid search tool (that goes through models, lr, etc.)
 
 
-def main(args):
+def train_and_test(args):
     start_time = time()
 
     # create logdir and record args (in both txt and pickle format)
@@ -160,14 +160,8 @@ def main(args):
         pickle.dump(args, f)
 
     # prep data
-    def fix_and_batch(ds):
-        ds = ds.map(lambda image, label, file_path: (image, label))
-        ds = ds.batch(args.batch_size)
-        return ds
     ds_train, ds_val, ds_test, class_names, label_counts = prepare_data(args)
-    ds_train = fix_and_batch(ds_train)
-    ds_val   = fix_and_batch(ds_val)
-    ds_test  = fix_and_batch(ds_test)
+    # ds_val = ds_val.prefetch()
 
     # save class names
     with Path(args.logdir, 'class_names.txt').open('w') as f:
@@ -185,7 +179,8 @@ def main(args):
     }
 
     # build model
-    model = build_model(model_name=args.model, n_classes=len(class_names))
+    model = build_model(model_name=args.model, n_classes=len(class_names),
+                        input_dimensions=args.image_dimensions)
     loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
     classifier = Classifier(
         model=model,
@@ -198,6 +193,7 @@ def main(args):
     )
 
     # train model
+    # with tf.profiler.experimental.Profile(str(args.logdir)):
     classifier.train(
         training_data=ds_train,
         validation_data=ds_val,
@@ -221,6 +217,17 @@ def main(args):
                          'Test Accuracy': test_acc,
                          'Total Train+Test Time': time() - start_time})
     classifier.report(test_results, "Test Results")
+
+
+def main(args):
+    if args.benchmark_input:
+        from loader import benchmark_input
+        benchmark_input(args)
+    elif args.test_load:
+        from loader import load_test
+        load_test(args)
+    else:
+        train_and_test(args)
 
 
 if __name__ == '__main__':

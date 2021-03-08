@@ -9,9 +9,17 @@ def get_user_args():
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '--image_dir', default=Path('../bug-data/Multi_Inverts_Master'),
+        '--image_dir', '-i', default=Path('../bug-data/Multi_Inverts_Master'),
         type=Path,
         help='Path to subdirectory-labeled image directory.'
+    )
+    parser.add_argument(
+        '--grayscale', default=False, action='store_true',
+        help='Input images are grayscale.'
+    )
+    parser.add_argument(
+        '--png', default=False, action='store_true',
+        help='Input images are PNGs (otherwise assumes JPEGs).'
     )
     parser.add_argument(
         '--val_dir', default=None, type=Path,
@@ -34,7 +42,7 @@ def get_user_args():
              'Alternatively, use the test_dir argument.'
     )
     parser.add_argument(
-        '--logdir', '-l', type=Path, default=None,  # default set below
+        '--logdir', '-o', type=Path, default=None,  # default set below
         help='Where to store output.'
     )
     parser.add_argument(
@@ -65,11 +73,21 @@ def get_user_args():
         '--learning_rate', '-r', default=0.001, type=float,
         help='Name of TF Hub model to use.'
     )
+    parser.add_argument(
+        '--benchmark_input', default=False, action='store_true',
+        help='Benchmark input pipeline.'
+    )
+    parser.add_argument(
+        '--test_load', default=False, action='store_true',
+        help='Show images (with augmentations).'
+    )
     args = parser.parse_args()
     return process_args(args)
 
 
 def process_args(args):
+
+    is_test = args.test_load or args.benchmark_input
 
     # image dimensions
     if args.image_dimensions is None:
@@ -77,8 +95,8 @@ def process_args(args):
         args.image_dimensions = (sz, sz)
 
     # logdir and run_name
-    assert args.logdir is None or args.run_name is None
-    if args.logdir is None:
+    assert args.logdir is None or args.run_name is None or is_test
+    if not is_test and args.logdir is None:
         if args.run_name is None:
             args.run_name = str(time()).replace('.', '-')
         else:
