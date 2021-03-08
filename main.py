@@ -179,7 +179,8 @@ def train_and_test(args):
     }
 
     # build model
-    model = build_model(model_name=args.model, n_classes=len(class_names))
+    model = build_model(model_name=args.model, n_classes=len(class_names),
+                        input_dimensions=args.image_dimensions)
     loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
     classifier = Classifier(
         model=model,
