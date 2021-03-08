@@ -90,5 +90,5 @@ def process_args(args):
     if args.test_dir is not None:
         args.test_part = 0
     if args.val_dir is not None:
-        args.val_dir = 0
+        args.val_part = 0
     return args
