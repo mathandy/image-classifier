@@ -175,7 +175,9 @@ def train_and_test(args):
 
     # define metrics
     metrics = {
-        # 'Accuracy': tf.keras.metrics.BinaryAccuracy,
+        # 'Accuracy': tf.keras.metrics.Accuracy,
+        # 'BinaryAccuracy': tf.keras.metrics.BinaryAccuracy,
+        # 'CategoricalAccuracy': tf.keras.metrics.CategoricalAccuracy,
     }
 
     # build model

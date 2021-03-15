@@ -42,7 +42,8 @@ def get_pretrained_featurizer(model_name, input_dimensions=None,
     return headless_pretrained_base, image_shape
 
 
-def build_model(model_name, n_classes, input_dimensions=None, input_channels=3):
+def build_model(model_name, n_classes, input_dimensions=None, input_channels=3,
+                headless=False):
     # see the common image input conventions
     # https://www.tensorflow.org/hub/common_signatures/images#input
 
@@ -54,9 +55,12 @@ def build_model(model_name, n_classes, input_dimensions=None, input_channels=3):
     )
 
     # build classifier model
-    model = tf.keras.Sequential([
-        headless_pretrained_base,
-        tf.keras.layers.Dense(n_classes)
-    ])
+    if headless:
+        model = headless_pretrained_base
+    else:
+        model = tf.keras.Sequential([
+            headless_pretrained_base,
+            tf.keras.layers.Dense(n_classes)
+        ])
     model.build(image_shape)
     return model
