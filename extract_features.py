@@ -1,9 +1,7 @@
 import tensorflow as tf
 from loader import get_image_filepaths, load_png, load_jpeg
 from model import build_model
-import numpy as np
 from pathlib import Path
-from imageio import imread
 
 
 def parse_cli_args():
