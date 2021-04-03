@@ -9,9 +9,16 @@ def get_user_args():
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '--image_dir', '-i', default=Path('../bug-data/Multi_Inverts_Master'),
+        '--image_dir', '-t', default=None,
         type=Path,
-        help='Path to subdirectory-labeled image directory.'
+        help='Path to subdirectory-labeled image directory (all images, '
+             'no test/train/val split, use --split_image_dir for that case).'
+    )
+    parser.add_argument(
+        '--split_image_dir', '-i', default=None,
+        type=Path,
+        help='Path to subdirectory-labeled image directory split into '
+             'train, test, and val dirs.'
     )
     parser.add_argument(
         '--grayscale', default=False, action='store_true',
@@ -88,6 +95,22 @@ def get_user_args():
 def process_args(args):
 
     is_test = args.test_load or args.benchmark_input
+
+    assert bool(args.image_dir) ^ bool(args.split_image_dir)
+    if args.split_image_dir:
+        train_dir = args.split_image_dir / 'train'
+        assert train_dir.exists()
+        args.image_dir = train_dir
+        val_dir = args.split_image_dir / 'val'
+        test_dir = args.split_image_dir / 'test'
+        if not (val_dir.exists() or test_dir.exists()):
+            raise FileNotFoundError(
+                "When using --split_image_dir, a test or val directory "
+                "must exists.")
+        if val_dir.exists():
+            args.val_dir = val_dir
+        if test_dir.exists():
+            args.test_dir = test_dir
 
     # image dimensions
     if args.image_dimensions is None:
