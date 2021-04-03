@@ -57,7 +57,7 @@ def get_user_args():
         help='Name of TF Hub model to use.'
     )
     parser.add_argument(
-        '--batch_size', default=128, type=int,
+        '--batch_size', default=32, type=int,
         help='Batch size.'
     )
     parser.add_argument(
