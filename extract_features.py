@@ -45,6 +45,7 @@ def extract_features(args):
     class_names = sorted(list(set(labels)))
     encoder = dict((n, i) for i, n in enumerate(class_names))
     encoded_labels = [encoder[l] for l in labels]
+    assert len(file_paths) > 1
 
     # create label key
     with (args.output_dir / 'label_key.txt').open('w') as f:

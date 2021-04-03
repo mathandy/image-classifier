@@ -25,8 +25,10 @@ def get_image_filepaths(image_dir, png=False):
     image_dir = Path(image_dir)
     assert image_dir.exists()
 
-    return [str(fp) for fp in image_dir.glob('*/*')
-            if is_image(fp, extensions)]
+    image_filepaths = [str(fp) for fp in image_dir.glob('*/*')
+                       if is_image(fp, extensions)]
+    assert len(image_filepaths)
+    return image_filepaths
 
 
 @tf.function
