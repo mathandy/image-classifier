@@ -69,7 +69,7 @@ def get_user_args():
         help='Resize all images to these dimensions (after augmentation).'
     )
     parser.add_argument(
-        '--model', '-m', default='BiT-M-R101x1',
+        '--model', '-m', default='BiT-M-R50x1',
         help='Name of TF Hub model to use.'
     )
     parser.add_argument(
