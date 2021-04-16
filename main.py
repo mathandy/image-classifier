@@ -82,13 +82,16 @@ class Classifier:
         n_classes = self.model.output_shape[-1]
         confusion_matrix = tf.zeros((n_classes, n_classes), dtype=tf.int32)
         loss = 0.
+        num_samples = 0
         for x_batch, y_batch in batches:
             logits = self.model(x_batch, training=False)
             predictions = tf.argmax(logits, 1)
-            loss += self.loss(y_batch, logits) / x_batch.shape[0]
+            loss += self.loss(y_batch, logits)
             confusion_matrix = confusion_matrix + tf.math.confusion_matrix(
                 y_batch, predictions, num_classes=n_classes)
             self.update_metrics(y_batch, predictions)
+            num_samples += x_batch.shape[0]
+        loss /= num_samples
         metric_results = self.get_metric_results(reset=reset_after)
 
         confusion_matrix = DataFrame(confusion_matrix.numpy(),
