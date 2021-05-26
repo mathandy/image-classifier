@@ -1,6 +1,7 @@
 from pathlib import Path
 from available_tf_hub_models import tf_hub_model_input_size
 from time import time
+from tempfile import gettempdir
 
 
 def get_user_args():
@@ -9,7 +10,7 @@ def get_user_args():
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '--image_dir', '-t', default=None,
+        '--image_dir', default=None,
         type=Path,
         help='Path to subdirectory-labeled image directory (all images, '
              'no test/train/val split, use --split_image_dir for that case).'
@@ -88,6 +89,15 @@ def get_user_args():
         '--test_load', default=False, action='store_true',
         help='Show images (with augmentations).'
     )
+    parser.add_argument(
+        '--triplet_loss', '-t', action='store_true',
+        help='Use triplet loss instead of cross-entropy.'
+    )
+    parser.add_argument(
+        '--tl_dims', default=256,
+        help='The triplet loss embedding dimensionality.  Only '
+             'applicable if --triplet_loss flag used.'
+    )
     args = parser.parse_args()
     return process_args(args)
 
@@ -119,13 +129,11 @@ def process_args(args):
 
     # logdir and run_name
     assert args.logdir is None or args.run_name is None or is_test
-    if not is_test and args.logdir is None:
+    if args.logdir is None and not is_test:
         if args.run_name is None:
             args.run_name = str(time()).replace('.', '-')
-        else:
-            from warnings import warn
-            warn("Using temp dir for named run.")
-        args.logdir = Path('..', 'classifier-logs', args.run_name)
+        args.logdir = Path(gettempdir()) / 'classifier-logs' / args.run_name
+        print(f"\n\nWARNING: Storing log in temp dir: {args.logdir}\n")
 
     # train-val-test split parameters
     if args.test_dir is not None:

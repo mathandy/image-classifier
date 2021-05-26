@@ -1,11 +1,13 @@
 from loader import prepare_data
 from model import build_model
 import tensorflow as tf
+import tensorflow_addons as tfa
 from pandas import DataFrame
 import numpy as np
 from pathlib import Path
 from time import time
 import pickle as pickle
+from sklearn.neighbors import NearestCentroid
 
 
 class Classifier:
@@ -24,7 +26,7 @@ class Classifier:
         self.min_val_loss = np.inf
         self.patience = 5
         self.remaining_patience = self.patience
-        self.log = Path(self.logdir, 'log.txt')
+        self.log = self.logdir / 'log.txt'
 
     def report(self, results_dict, title=None, write_to_log=True):
         s = f"\n{title}\n"
@@ -62,9 +64,7 @@ class Classifier:
     def train_step(self, x_batch, y_batch, sample_weights=None,
                    update_metrics=True):
         with tf.GradientTape() as tape:
-            # TODO: figure out if this updates batch norm layers even
-            # though they are marked not trainable
-            # TO SEE, check self.model.trainable_weights
+            # Note: to check trainable weights, self.model.trainable_weights
             logits = self.model(x_batch, training=True)
             loss_value = self.loss(y_batch, logits,
                                    sample_weight=sample_weights)
@@ -75,10 +75,29 @@ class Classifier:
             self.update_metrics(y_batch, tf.argmax(logits, 1))
         return loss_value
 
+    def nearest_centroid_accuracy(self, batches, reset_before=True, reset_after=True):
+        if reset_before:
+            self.reset_metrics()
+
+        xs, ys = zip(*[(self.model(x, training=False).numpy(), y.numpy())
+                       for x, y in batches])
+        xs, ys = np.concatenate(xs, 0), np.concatenate(ys, 0)
+
+        if np.isnan(xs).any():
+            return np.nan
+
+        n = len(xs)//2
+        nc_classifier = NearestCentroid()
+        nc_classifier.fit(xs[:n], ys[:n])
+        accuracy = nc_classifier.score(xs[n:], ys[n:])
+
+        return accuracy
+
     def score(self, batches, reset_before=True, reset_after=True):
         if reset_before:
             self.reset_metrics()
 
+        # evaluate
         n_classes = self.model.output_shape[-1]
         confusion_matrix = tf.zeros((n_classes, n_classes), dtype=tf.int32)
         loss = 0.
@@ -105,7 +124,7 @@ class Classifier:
             return None
         return tf.gather(self.class_weights, y_true)
 
-    def train(self, training_data, validation_data=None, epochs=1):
+    def train(self, training_data, validation_data=None, epochs=1, triplet_loss=False):
         atime = time()
         for epoch in range(epochs):
             print("\nStart of epoch %d" % (epoch,))
@@ -125,12 +144,16 @@ class Classifier:
                         "".format(epoch, atime))
 
             if validation_data is not None:
-                val_results, val_loss, val_cm = self.score(validation_data)
-                val_acc = np.trace(val_cm) / np.array(val_cm).sum()
-                val_results.update({'Val Loss': val_loss,
-                                    'Confusion Matrix': f'\n{val_cm}',
-                                    'Accuracy': val_acc})
-                elapsed, atime = time() - atime, time()
+                if triplet_loss:
+                    nc_acc = self.nearest_centroid_accuracy(validation_data)
+                    val_results = {"Nearest Centroid Accuracy": nc_acc}
+                else:
+                    val_results, val_loss, val_cm = self.score(validation_data)
+                    val_acc = np.trace(val_cm) / np.array(val_cm).sum()
+                    val_results.update({'Val Loss': val_loss,
+                                        'Confusion Matrix': f'\n{val_cm}',
+                                        'Accuracy': val_acc})
+                    elapsed, atime = time() - atime, time()
                 self.report(val_results,
                             "Epoch {} ({:.3f} s) Validation Results"
                             "".format(epoch, atime))
@@ -172,7 +195,7 @@ def train_and_test(args):
 
     # set class weights to compensate for class imbalance
     class_weights = None
-    if not args.no_class_weights:
+    if not (args.no_class_weights or args.triplet_loss):
         print(f"\nTrain Label Counts\n{label_counts}\n")
         class_weights = [1/c for c in label_counts.values()]
 
@@ -184,9 +207,15 @@ def train_and_test(args):
     }
 
     # build model
-    model = build_model(model_name=args.model, n_classes=len(class_names),
+    num_dense_outputs = args.tl_dims if args.triplet_loss else len(class_names)
+    model = build_model(model_name=args.model, n_classes=num_dense_outputs,
                         input_dimensions=args.image_dimensions)
-    loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+    if args.triplet_loss:
+        model.add(tf.keras.layers.Lambda(lambda x: tf.math.l2_normalize(x, axis=1)))
+        loss = tfa.losses.TripletSemiHardLoss()
+    else:
+        loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+
     classifier = Classifier(
         model=model,
         optimizer=tf.keras.optimizers.Adam(learning_rate=args.learning_rate),
@@ -203,6 +232,7 @@ def train_and_test(args):
         training_data=ds_train,
         validation_data=ds_val,
         epochs=args.epochs,
+        triplet_loss=args.triplet_loss,
     )
 
     # test
