@@ -43,7 +43,8 @@ def get_pretrained_featurizer(model_name, input_dimensions=None,
 
 
 def build_model(model_name, n_classes, input_dimensions=None, input_channels=3,
-                headless=False):
+                headless=False, is_embedding=False):
+    assert not (headless and is_embedding)
     # see the common image input conventions
     # https://www.tensorflow.org/hub/common_signatures/images#input
 
@@ -57,6 +58,13 @@ def build_model(model_name, n_classes, input_dimensions=None, input_channels=3,
     # build classifier model
     if headless:
         model = headless_pretrained_base
+    elif is_embedding:
+        model = tf.keras.Sequential([
+            headless_pretrained_base,
+            tf.keras.layers.Dense(2048, activation='relu'),
+            tf.keras.layers.Dense(n_classes),
+            tf.keras.layers.Lambda(lambda x: tf.math.l2_normalize(x, axis=1)),
+        ])
     else:
         model = tf.keras.Sequential([
             headless_pretrained_base,

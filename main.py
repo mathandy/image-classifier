@@ -69,6 +69,8 @@ class Classifier:
             loss_value = self.loss(y_batch, logits,
                                    sample_weight=sample_weights)
         grads = tape.gradient(loss_value, self.model.trainable_weights)
+        if np.isnan(loss_value.numpy()):
+            from IPython import embed; embed()  ### DEBUG
         self.optimizer.apply_gradients(zip(grads, self.model.trainable_weights))
 
         if update_metrics:
@@ -83,8 +85,10 @@ class Classifier:
                        for x, y in batches])
         xs, ys = np.concatenate(xs, 0), np.concatenate(ys, 0)
 
-        if np.isnan(xs).any():
-            return np.nan
+        # if np.isnan(xs).any():
+        #     x, y = next(iter(batches))
+        #     f = self.model(x, training=False)
+        #     return np.nan
 
         n = len(xs)//2
         nc_classifier = NearestCentroid()
@@ -92,6 +96,16 @@ class Classifier:
         accuracy = nc_classifier.score(xs[n:], ys[n:])
 
         return accuracy
+
+    def compute_val_loss(self, batches):
+        loss = 0.
+        num_samples = 0
+        for x_batch, y_batch in batches:
+            logits = self.model(x_batch, training=False)
+            loss += self.loss(y_batch, logits)
+            num_samples += x_batch.shape[0]
+        loss /= num_samples
+        return loss
 
     def score(self, batches, reset_before=True, reset_after=True):
         if reset_before:
@@ -145,12 +159,14 @@ class Classifier:
 
             if validation_data is not None:
                 if triplet_loss:
-                    nc_acc = self.nearest_centroid_accuracy(validation_data)
-                    val_results = {"Nearest Centroid Accuracy": nc_acc}
+                    val_acc = self.nearest_centroid_accuracy(validation_data)
+                    val_loss = self.compute_val_loss(validation_data)
+                    val_results = {"Validation Accuracy": val_acc,
+                                   "Validation Loss": val_loss}
                 else:
                     val_results, val_loss, val_cm = self.score(validation_data)
                     val_acc = np.trace(val_cm) / np.array(val_cm).sum()
-                    val_results.update({'Val Loss': val_loss,
+                    val_results.update({'Validation Loss': val_loss,
                                         'Confusion Matrix': f'\n{val_cm}',
                                         'Accuracy': val_acc})
                     elapsed, atime = time() - atime, time()
@@ -209,10 +225,12 @@ def train_and_test(args):
     # build model
     num_dense_outputs = args.tl_dims if args.triplet_loss else len(class_names)
     model = build_model(model_name=args.model, n_classes=num_dense_outputs,
-                        input_dimensions=args.image_dimensions)
+                        input_dimensions=args.image_dimensions,
+                        is_embedding=args.triplet_loss)
     if args.triplet_loss:
-        model.add(tf.keras.layers.Lambda(lambda x: tf.math.l2_normalize(x, axis=1)))
-        loss = tfa.losses.TripletSemiHardLoss()
+        # loss = tfa.losses.TripletSemiHardLoss()
+        # raise Exception("ANDY: Note that this loss function is causing NaNs")
+        loss = tfa.losses.TripletHardLoss()
     else:
         loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
 
