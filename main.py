@@ -263,12 +263,18 @@ def train_and_test(args):
               f"the model never reached 80% validation accuracy.  "
               f"Path checked: {best_model_path}")
 
-    test_results, test_loss, test_cm = classifier.score(ds_test)
-    test_acc = np.trace(test_cm) / np.array(test_cm).sum()
-    test_results.update({'Test Loss': test_loss,
-                         'Test Confusion Matrix': f'\n{test_cm}',
-                         'Test Accuracy': test_acc,
-                         'Total Train+Test Time': time() - start_time})
+    if args.triplet_loss:
+        test_acc = classifier.nearest_centroid_accuracy(ds_test)
+        test_loss = classifier.compute_val_loss(ds_test)
+        test_results = {"Validation Accuracy": test_acc,
+                        "Validation Loss": test_loss}
+    else:
+        test_results, test_loss, test_cm = classifier.score(ds_test)
+        test_acc = np.trace(test_cm) / np.array(test_cm).sum()
+        test_results.update({'Test Loss': test_loss,
+                             'Test Confusion Matrix': f'\n{test_cm}',
+                             'Test Accuracy': test_acc,
+                             'Total Train+Test Time': time() - start_time})
     classifier.report(test_results, "Test Results")
 
 
