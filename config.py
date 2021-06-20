@@ -98,6 +98,10 @@ def get_user_args():
         help='The triplet loss embedding dimensionality.  Only '
              'applicable if --triplet_loss flag used.'
     )
+    parser.add_argument(
+        '--standardize', action='store_true', default=False,
+        help='Standardize each image to have mean 0 and variance 1.'
+    )
     args = parser.parse_args()
     return process_args(args)
 

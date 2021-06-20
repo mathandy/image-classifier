@@ -74,7 +74,7 @@ def shape_setter(shape):
 
 
 def load(file_paths, augmentation_func=None, size=None, class_names=None,
-         include_filepaths=False, grayscale=False, png=False):
+         include_filepaths=False, grayscale=False, png=False, standardize=False):
     labels = [filepath_to_label(fp) for fp in file_paths]
     if class_names is None:
         class_names = list(set(labels))
@@ -127,6 +127,9 @@ def load(file_paths, augmentation_func=None, size=None, class_names=None,
         map_func=lambda img: tf.image.convert_image_dtype(img, tf.float32),
         num_parallel_calls=MAP_PARALLELISM
     )
+
+    if standardize:
+        ds_images = ds_images.map(tf.image.per_image_standardization)
 
     # zip, shuffle, batch, and return
     if include_filepaths:
@@ -184,6 +187,7 @@ def prepare_data(args):
         size=args.image_dimensions,
         grayscale=args.grayscale,
         png=args.png,
+        standardize=args.standardize,
     )
 
     ds_val, val_class_names = load(
@@ -192,6 +196,7 @@ def prepare_data(args):
         size=args.image_dimensions,
         grayscale=args.grayscale,
         png=args.png,
+        standardize=args.standardize,
     )
 
     ds_test, test_class_names = load(
@@ -200,6 +205,7 @@ def prepare_data(args):
         size=args.image_dimensions,
         grayscale=args.grayscale,
         png=args.png,
+        standardize=args.standardize,
     )
 
     assert set(test_class_names) == set(val_class_names) == \
