@@ -230,7 +230,7 @@ def train_and_test(args):
     if args.triplet_loss:
         # loss = tfa.losses.TripletSemiHardLoss()
         # raise Exception("ANDY: Note that this loss function is causing NaNs")
-        loss = tfa.losses.TripletHardLoss()
+        loss = tfa.losses.TripletHardLoss(margin=args.tl_margin, soft=args.tl_soft)
     else:
         loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
 

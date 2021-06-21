@@ -99,6 +99,16 @@ def get_user_args():
              'applicable if --triplet_loss flag used.'
     )
     parser.add_argument(
+        '--tl_margin', default=0.2, type=float,
+        help='The triplet loss margin.  Only '
+             'applicable if --triplet_loss flag used.'
+    )
+    parser.add_argument(
+        '--tl_soft', default=False, action='store_true',
+        help='Use soft triplet loss margin.  Only '
+             'applicable if --triplet_loss flag used.'
+    )
+    parser.add_argument(
         '--standardize', action='store_true', default=False,
         help='Standardize each image to have mean 0 and variance 1.'
     )
