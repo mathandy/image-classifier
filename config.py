@@ -2,6 +2,7 @@ from pathlib import Path
 from available_tf_hub_models import tf_hub_model_input_size
 from time import time
 from tempfile import gettempdir
+from augmenter import augmentation_choices
 
 
 def get_user_args():
@@ -58,7 +59,7 @@ def get_user_args():
         help='Name of TF Hub model to use.'
     )
     parser.add_argument(
-        '--batch_size', default=32, type=int,
+        '--batch_size', '-b', default=32, type=int,
         help='Batch size.'
     )
     parser.add_argument(
@@ -111,6 +112,10 @@ def get_user_args():
     parser.add_argument(
         '--standardize', action='store_true', default=False,
         help='Standardize each image to have mean 0 and variance 1.'
+    )
+    parser.add_argument(
+        '--augmentation', '-a', default='strong', choices=augmentation_choices,
+        help="Which augmentation pipeline to use.\nChoices:{'\n'.join(augmentation_choices}."
     )
     args = parser.parse_args()
     return process_args(args)

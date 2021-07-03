@@ -1,4 +1,4 @@
-from augmenter import augment
+from augmenter import get_augmentation_pipeline
 
 from pathlib import Path
 from os import sep as file_path_seperator
@@ -183,7 +183,7 @@ def prepare_data(args):
 
     ds_train, train_class_names = load(
         file_paths=train_file_paths,
-        augmentation_func=augment,
+        augmentation_func=get_augmentation_pipeline(args),
         size=args.image_dimensions,
         grayscale=args.grayscale,
         png=args.png,

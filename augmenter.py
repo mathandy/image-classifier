@@ -1,3 +1,4 @@
+from autoaugment import ImageNetPolicy, CIFAR10Policy, SVHNPolicy, SubPolicy
 from albumentations import (
     CLAHE, RandomRotate90, Transpose, ShiftScaleRotate, Blur, OpticalDistortion,
     GridDistortion, HueSaturationValue, GaussNoise, MotionBlur, MedianBlur,
@@ -37,8 +38,23 @@ def strong_aug(p=0.5):
     ], p=p)
 
 
-albumentations_function = strong_aug(p=0.9)
+autoaugment_policies = {
+    'cifar10': CIFAR10Policy,
+    'svhn': SVHNPolicy,
+    'imagenet': ImageNetPolicy,
+    'sub': SubPolicy,
+}
+autoaugment_choices = [f'auto-{k}' for k in autoaugment_policies.keys()]
+augmentation_choices = ['none', 'strong', 'auto'] + autoaugment_choices
 
 
-def augment(image):
-    return albumentations_function(image=image)["image"]
+def get_augmentation_pipeline(args):
+    if args.augmentation.lower() == 'strong':
+        return lambda image: strong_aug(p=0.9)(image=image)["image"]
+    elif args.augmentation.lower() in autoaugment_choices:
+        policy = args.augmentation.lower().replace('auto-', '')
+        return autoaugment_policies[policy]
+    elif args.augmentation.lower() == 'none':
+        return None
+    else:
+        raise ValueError(f'Augmentation mode {args.augmentation} not understood.')
