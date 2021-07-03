@@ -1,8 +1,7 @@
 from albumentations import (
-    HorizontalFlip, IAAPerspective, ShiftScaleRotate, CLAHE, RandomRotate90,
-    Transpose, ShiftScaleRotate, Blur, OpticalDistortion, GridDistortion, HueSaturationValue,
-    GaussNoise, MotionBlur, MedianBlur, PiecewiseAffine,
-    Sharpen, Emboss, RandomBrightnessContrast, Flip, OneOf, Compose
+    CLAHE, RandomRotate90, Transpose, ShiftScaleRotate, Blur, OpticalDistortion,
+    GridDistortion, HueSaturationValue, GaussNoise, MotionBlur, MedianBlur,
+    PiecewiseAffine, Sharpen, Emboss, RandomBrightnessContrast, Flip, OneOf, Compose
 )
 
 
@@ -36,6 +35,7 @@ def strong_aug(p=0.5):
         ], p=0.3),
         HueSaturationValue(p=0.3),
     ], p=p)
+
 
 albumentations_function = strong_aug(p=0.9)
 
