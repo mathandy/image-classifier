@@ -5,3 +5,4 @@ imageio
 numpy
 pandas
 scikit-learn
+Pillow

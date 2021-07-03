@@ -4,6 +4,7 @@ from albumentations import (
     GridDistortion, HueSaturationValue, GaussNoise, MotionBlur, MedianBlur,
     PiecewiseAffine, Sharpen, Emboss, RandomBrightnessContrast, Flip, OneOf, Compose
 )
+import numpy as np
 
 
 def strong_aug(p=0.5):
@@ -52,8 +53,12 @@ def get_augmentation_pipeline(args):
     if args.augmentation.lower() == 'strong':
         return lambda image: strong_aug(p=0.9)(image=image)["image"]
     elif args.augmentation.lower() in autoaugment_choices:
-        policy = args.augmentation.lower().replace('auto-', '')
-        return autoaugment_policies[policy]
+        from PIL import Image
+        policy = autoaugment_policies[args.augmentation.lower().replace('auto-', '')]()
+
+        def augmentation_func(image):
+            return np.array(policy(Image.fromarray(image)))
+        return augmentation_func
     elif args.augmentation.lower() == 'none':
         return None
     else:
