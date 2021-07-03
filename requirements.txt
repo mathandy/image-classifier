@@ -4,3 +4,4 @@ albumentations
 imageio
 numpy
 pandas
+scikit-learn

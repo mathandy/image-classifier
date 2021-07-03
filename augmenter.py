@@ -1,8 +1,8 @@
 from albumentations import (
     HorizontalFlip, IAAPerspective, ShiftScaleRotate, CLAHE, RandomRotate90,
     Transpose, ShiftScaleRotate, Blur, OpticalDistortion, GridDistortion, HueSaturationValue,
-    IAAAdditiveGaussianNoise, GaussNoise, MotionBlur, MedianBlur, IAAPiecewiseAffine,
-    IAASharpen, IAAEmboss, RandomBrightnessContrast, Flip, OneOf, Compose
+    GaussNoise, MotionBlur, MedianBlur, PiecewiseAffine,
+    Sharpen, Emboss, RandomBrightnessContrast, Flip, OneOf, Compose
 )
 
 
@@ -15,7 +15,6 @@ def strong_aug(p=0.5):
         Flip(),
         Transpose(),
         OneOf([
-            IAAAdditiveGaussianNoise(),
             GaussNoise(),
         ], p=0.2),
         OneOf([
@@ -27,12 +26,12 @@ def strong_aug(p=0.5):
         OneOf([
             OpticalDistortion(p=0.3),
             GridDistortion(p=0.1),
-            IAAPiecewiseAffine(p=0.3),
+            PiecewiseAffine(p=0.3),
         ], p=0.2),
         OneOf([
             CLAHE(clip_limit=2),
-            IAASharpen(),
-            IAAEmboss(),
+            Sharpen(),
+            Emboss(),
             RandomBrightnessContrast(),
         ], p=0.3),
         HueSaturationValue(p=0.3),
