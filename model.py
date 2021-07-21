@@ -42,7 +42,7 @@ def get_pretrained_featurizer(model_name, input_dimensions=None,
     return headless_pretrained_base, image_shape
 
 
-def build_model(model_name, n_classes, input_dimensions=None, input_channels=3,
+def get_model(model_name, n_classes, input_dimensions=None, input_channels=3,
                 headless=False, is_embedding=False):
     assert not (headless and is_embedding)
     # see the common image input conventions
@@ -70,5 +70,16 @@ def build_model(model_name, n_classes, input_dimensions=None, input_channels=3,
             headless_pretrained_base,
             tf.keras.layers.Dense(n_classes)
         ])
+    return model, image_shape
+
+
+def build_model(model_name, n_classes, input_dimensions=None, input_channels=3,
+                headless=False, is_embedding=False):
+    model, image_shape = get_model(model_name=model_name,
+                      n_classes=n_classes,
+                      input_dimensions=input_dimensions,
+                      input_channels=input_channels,
+                      headless=headless,
+                      is_embedding=is_embedding)
     model.build(image_shape)
     return model
