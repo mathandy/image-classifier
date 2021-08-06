@@ -6,7 +6,7 @@ from available_tf_hub_models import tf_hub_model_urls, tf_hub_model_input_size
 # BATCH_NORM_MOMENTUM = 0.99  # 0.997 is a choice hinted at by tfhub
 
 def get_expected_image_shape(model_path, model_name):
-
+    model_path = hub.resolve(model_path)
     try:
         module_spec = hub.load_module_spec(model_path)
         input_dimensions = hub.get_expected_image_size(module_spec)
@@ -20,13 +20,14 @@ def get_expected_image_shape(model_path, model_name):
 
 
 def get_pretrained_featurizer(model_name, input_dimensions=None,
-                              input_channels=3):
+                              input_channels=3, trainable=False):
     # see the common image input conventions
     # https://www.tensorflow.org/hub/common_signatures/images#input
 
     model_path = model_name
     if not model_path[:4] == 'http':
         model_path = tf_hub_model_urls[model_name]
+    model_path = hub.resolve(model_path)
 
     # get image shape
     if input_dimensions is None:
@@ -34,16 +35,12 @@ def get_pretrained_featurizer(model_name, input_dimensions=None,
     image_shape = list(input_dimensions) + [input_channels]
 
     # load headless pretrained model as keras layer
-    headless_pretrained_base = hub.KerasLayer(
-        model_path,
-        trainable=False,
-        # arguments=dict(batch_norm_momentum=batch_norm_momentum),\
-        input_shape=image_shape)
+    headless_pretrained_base = hub.KerasLayer(model_path, trainable=trainable)
     return headless_pretrained_base, image_shape
 
 
 def get_model(model_name, n_classes, input_dimensions=None, input_channels=3,
-                headless=False, is_embedding=False):
+                headless=False, is_embedding=False, trainable=False):
     assert not (headless and is_embedding)
     # see the common image input conventions
     # https://www.tensorflow.org/hub/common_signatures/images#input
@@ -52,7 +49,8 @@ def get_model(model_name, n_classes, input_dimensions=None, input_channels=3,
     headless_pretrained_base, image_shape = get_pretrained_featurizer(
         model_name=model_name,
         input_dimensions=input_dimensions,
-        input_channels=input_channels
+        input_channels=input_channels,
+        trainable=trainable,
     )
 
     # build classifier model
@@ -74,12 +72,13 @@ def get_model(model_name, n_classes, input_dimensions=None, input_channels=3,
 
 
 def build_model(model_name, n_classes, input_dimensions=None, input_channels=3,
-                headless=False, is_embedding=False):
+                headless=False, is_embedding=False, trainable=False):
     model, image_shape = get_model(model_name=model_name,
                       n_classes=n_classes,
                       input_dimensions=input_dimensions,
                       input_channels=input_channels,
                       headless=headless,
-                      is_embedding=is_embedding)
+                      is_embedding=is_embedding,
+                      trainable=trainable)
     model.build(image_shape)
     return model
