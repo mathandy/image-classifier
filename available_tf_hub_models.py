@@ -49,7 +49,7 @@ def tf_hub_model(name, input_size, url=None):
 
 
 def get_hub_url(model_name):
-    return f"https://tfhub.dev/google/imagenet/{model_name}/feature_vector/4"
+    return f"https://tfhub.dev/google/imagenet/{model_name}/feature_vector/5"
 
 
 # add all mobilenet models to list
@@ -74,8 +74,9 @@ tf_hub_models += [
 # note using 114 instead of 224 to avoid OOM error
 def enet_url(i):
     return f'https://tfhub.dev/tensorflow/efficientnet/b{i}/feature-vector/1'
+enet_sizes = (224, 240, 260, 300, 380, 456, 528, 600)
 tf_hub_models += \
-    [tf_hub_model(f'EfficientNet-B{i}', 224, enet_url(i)) for i in range(8)]
+    [tf_hub_model(f'EfficientNet-B{i}', s, enet_url(i)) for i, s in zip(range(8), enet_sizes)]
 
 # add BiT-S (ImageNet-1k) and BiT-M (ImageNet-21k) models (expected size unkown)
 tf_hub_models += [
