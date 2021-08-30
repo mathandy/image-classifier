@@ -24,9 +24,13 @@ def get_expected_image_shape(model_path, model_name):
 
 
 def get_pretrained_featurizer(model_name, input_dimensions=None,
-                              input_channels=3, trainable=False):
+                              input_channels=3, trainable=False, dtype='float32'):
     # see the common image input conventions
     # https://www.tensorflow.org/hub/common_signatures/images#input
+
+    if dtype != 'float32':
+        tf.keras.backend.set_floatx(dtype)
+        raise NotImplementedError("the model weights don't load at float64 and casting them manually doesn't seem to do anything.")
 
     model_path = model_name
     if not model_path[:4] == 'http':
