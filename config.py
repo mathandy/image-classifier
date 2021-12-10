@@ -147,12 +147,13 @@ def process_args(args):
         args.image_dimensions = (sz, sz)
 
     # logdir and run_name
-    assert args.logdir is None or args.run_name is None or is_test
-    if args.logdir is None and not is_test:
+    if not is_test:
         if args.run_name is None:
             args.run_name = str(time()).replace('.', '-')
-        args.logdir = Path(gettempdir()) / 'classifier-logs' / args.run_name
-        print(f"\n\nWARNING: Storing log in temp dir: {args.logdir}\n")
+        if args.logdir is None:
+            args.logdir = Path(gettempdir()) / 'classifier-logs'
+            print(f"\n\nWARNING: Storing log in temp dir: {args.logdir}\n")
+        args.logdir = args.logdir / args.run_name
 
     # train-val-test split parameters
     if args.test_dir is not None:
